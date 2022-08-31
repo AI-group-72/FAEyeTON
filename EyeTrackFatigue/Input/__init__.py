@@ -8,27 +8,30 @@
 
 # 3 : максимально отладить считывание, приваять UI для лйгкой настройки
 
-from Input.SingleData import SingleData
+
 from Input.InputSection import InputSection
 from Input.InputStream import InputStream
-from DeviceManager import DeviceHandler as dh
+from DeviceManager import DeviceHandler
 
 
 def read_video_file(path):
     # считывание файла
-
     return InputSection()
 
 
 def read_csv_file(path):
     # считывание файла
-    device = dh.DeviceHandler
+    device = DeviceHandler(path)
     data = InputSection()
-    data.add_data(device.request_data(path))
+    data.add_data_array(device.request_data())
     return data
 
 
 def init_reading_stream():
     # запуск потока ввода
-    InputStream(dh.DeviceHandler())
+    InputStream(DeviceHandler())
 
+
+# section = read_csv_file('../test_data.csv')
+# print(section)
+#

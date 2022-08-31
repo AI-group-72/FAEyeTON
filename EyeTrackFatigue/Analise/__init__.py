@@ -1,8 +1,7 @@
 # модуль анализа входных данных, выделяющий интересующие нас метрики
-
+from Input import read_csv_file
+from ParsedData import ParsedData
 # стадия 1
-import ParsedData as pd
-
 
 def clear(input_section):
     # первичная обработка данных
@@ -14,12 +13,7 @@ def interpolation(input_section):
     return input_section
 
 
-data = pd.ParsedData()
-
-# стадия 2
-# дополнить метрики
-
-
-# стадия 3
-# сделать комбинированные метрики
-# выглядит скудно, но плюс минус так и есть
+section = read_csv_file('../test_data.csv')
+metrics = ParsedData()
+metrics.parse(section)
+print(metrics)
