@@ -4,7 +4,9 @@ from Input.SingleData import SingleData
 
 
 class InputSection:
+
     def __init__(self):
+        self.FOV = 82 * math.sqrt(2)
         self.dotCount = 0
         self.positionData = []
         self.distanceData = []
@@ -16,7 +18,7 @@ class InputSection:
 
     def add_data(self, raw_data):
         self.dotCount += 1
-        self.positionData.append(SingleData(raw_data))
+        self.positionData.append(SingleData(raw_data, self.FOV))
         if len(self.positionData) > 1:
             self.distanceData.append(self.positionData[-1].get_distance(self.positionData[-2]))
             self.velocityData.append(self.distanceData[-1] / (self.positionData[-1].time - self.positionData[-2].time))
