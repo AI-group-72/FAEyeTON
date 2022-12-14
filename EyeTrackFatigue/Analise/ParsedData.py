@@ -228,6 +228,7 @@ class ParsedData:
         self.secondary = SecondaryMetrics()
         print('computing metrics...')
         print('fixations...')
+
         for fix in self.fixations:
             if len(fix.points) < 3:
                 continue
@@ -235,9 +236,6 @@ class ParsedData:
             self.secondary.fix_distance += fix.get_distance()
             self.secondary.max_f_speed = max(self.secondary.max_f_speed, fix.get_avr_speed())
             self.secondary.min_f_speed = min(self.secondary.min_f_speed, fix.get_avr_speed())
-            self.secondary.min_acc = min(self.secondary.min_acc, fix.get_avr_acceleration())
-            self.secondary.max_acc = max(self.secondary.max_acc, fix.get_avr_acceleration())
-            self.secondary.avr_acc += fix.get_avr_acceleration() * fix.time
             self.secondary.min_curve = min(self.secondary.min_curve, fix.get_curve())
             self.secondary.max_curve = min(self.secondary.max_curve, fix.get_curve())
             self.secondary.avr_curve += fix.get_curve()
@@ -267,9 +265,6 @@ class ParsedData:
             self.secondary.sacc_distance += sacc.get_distance()
             self.secondary.max_s_speed = max(self.secondary.max_s_speed, sacc.get_avr_speed())
             self.secondary.min_s_speed = min(self.secondary.min_s_speed, sacc.get_avr_speed())
-            self.secondary.avr_acc += sacc.get_avr_acceleration() * sacc.time
-            self.secondary.max_acc = max(self.secondary.max_acc, sacc.get_avr_acceleration())
-            self.secondary.min_acc = min(self.secondary.min_acc, sacc.get_avr_acceleration())
             self.secondary.max_curve = max(self.secondary.max_curve, sacc.get_curve())
             self.secondary.min_curve = min(self.secondary.min_curve, sacc.get_curve())
             self.secondary.avr_curve += sacc.get_curve()
@@ -289,7 +284,19 @@ class ParsedData:
         v0 = 0
         prev = s0
         dist = 0
+        v = -1
+        p = None
+
         for step in self.raw_data.positionData:
+            if p is not None:
+                if v != -1:
+                    acc = abs(v - p.get_distance(step) / (step.time - p.time))  # / (step.time - p.time)
+                    self.secondary.avr_acc += acc
+                    self.secondary.min_acc = min(self.secondary.min_i_acc, acc / (step.time - p.time))
+                    self.secondary.max_acc = max(self.secondary.max_i_acc, acc / (step.time - p.time))
+                v = p.get_distance(step) / (step.time - p.time)
+            p = step
+
             if step.time - t0 > 1:
                 dt = step.time - t0
                 dv = abs(v0 - dist/dt)
@@ -306,6 +313,12 @@ class ParsedData:
                 dist = 0
             dist += step.get_distance(prev)
             prev = step
+
+        print('Warning')
+        print(self.secondary.avr_acc)
+        print((len(self.raw_data.positionData) - 2))
+        print('Warning')
+        self.secondary.avr_acc /= self.raw_data.positionData[-1].time - self.raw_data.positionData[2].time
         self.secondary.avr_i_speed /= i_count
         self.secondary.avr_i_acc /= i_count
 
@@ -371,7 +384,7 @@ class ParsedData:
                 'Fixation Frequency': [len(self.fixations) / self.time_frame],
                 'Average Fix Frequency in interval (1s)': [self.secondary.avr_freq],
                 'Max Fix Frequency in interval (1s)': [self.secondary.max_freq],
-                'Average Acceleration': [self.secondary.avr_acc / self.time_frame],
+                'Average Acceleration': [self.secondary.avr_acc],
                 'Min Acceleration': [self.secondary.min_acc],
                 'Max Acceleration': [self.secondary.max_acc],
                 'Average Speed': [self.avrSpeed],
@@ -487,8 +500,7 @@ class ParsedData:
         update_cell(file_to, new_row, key_index(df, 'Average Fix Frequency in interval (1s)'), self.secondary.avr_freq)
         update_cell(file_to, new_row, key_index(df, 'Max Fix Frequency in interval (1s)'), self.secondary.max_freq)
 
-        update_cell(file_to, new_row, key_index(df, 'Average Acceleration'),
-                    self.secondary.avr_acc / (self.secondary.fix_time + self.secondary.sacc_time))
+        update_cell(file_to, new_row, key_index(df, 'Average Acceleration'), self.secondary.avr_acc)
         update_cell(file_to, new_row, key_index(df, 'Min Acceleration'), self.secondary.min_acc)
         update_cell(file_to, new_row, key_index(df, 'Max Acceleration'), self.secondary.max_acc)
 
@@ -579,7 +591,7 @@ class ParsedData:
 
 #       line.append(self.secondary.min_freq) always = 0
 
-        line.append(self.secondary.avr_acc / (self.secondary.fix_time + self.secondary.sacc_time))
+        line.append(self.secondary.avr_acc)
         line.append(self.secondary.min_acc)
         line.append(self.secondary.max_acc)
 
