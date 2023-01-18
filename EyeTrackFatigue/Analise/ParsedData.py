@@ -92,11 +92,11 @@ class ParsedData:
         if self.method == 4:
             return 'by pupil_labs file '
         if self.method == 2:
-            return 'abs dist ' + self.args.__str__() + ' & center ' + self.center_radius.__str__()
+            return 'abs dist ' + self.args.__str__()
         if self.method == 1:
-            return 'area size ' + self.args.__str__() + ' & center ' + self.center_radius.__str__()
+            return 'area size ' + self.args.__str__()
         self.method = 0
-        return 'speed ' + self.args.__str__() + ' & center ' + self.center_radius.__str__()
+        return 'speed ' + self.args.__str__()
 
     # Алгоритм Владислава. Расстояние между любыми двумя последовательными точками,
     # которое является оценкой скорости движения глаз (Shic, Scassellati, & Chawarska, 2008).
@@ -314,10 +314,7 @@ class ParsedData:
             dist += step.get_distance(prev)
             prev = step
 
-        print('Warning')
-        print(self.secondary.avr_acc)
-        print((len(self.raw_data.positionData) - 2))
-        print('Warning')
+
         self.secondary.avr_acc /= self.raw_data.positionData[-1].time - self.raw_data.positionData[2].time
         self.secondary.avr_i_speed /= i_count
         self.secondary.avr_i_acc /= i_count
