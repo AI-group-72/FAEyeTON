@@ -33,9 +33,8 @@ class Example(QMainWindow):
         self.arg_0_line = QLineEdit(self)
         self.arg_1_line = QLineEdit(self)
         self.arg_step_line = QLineEdit(self)
-
-        self.rad_line = QLineEdit(self)
         """
+        self.rad_line = QLineEdit(self)
         self.x0_line = QLineEdit(self)
         self.x1_line = QLineEdit(self)
         """
@@ -69,11 +68,11 @@ class Example(QMainWindow):
         self.method_label.move(20, 20)
 
 
-        rad_label = QLabel('Диаметр центральной области', self)
-        rad_label.move(200, 20)
-        rad_label.adjustSize()
-        self.rad_line.setText('5')
-        self.rad_line.setGeometry(200, 40, 100, 20)
+        # rad_label = QLabel('Диаметр центральной области', self)
+        # rad_label.move(200, 20)
+        # rad_label.adjustSize()
+        # self.rad_line.setText('5')
+        # self.rad_line.setGeometry(200, 40, 100, 20)
         self.arg_line.setGeometry(200, 80, 100, 20)
         self.arg_line.setText('220')
         self.arg_label.move(200, 60)
@@ -106,8 +105,8 @@ class Example(QMainWindow):
         load_btn.setGeometry(220, 160, 120, 30)
         load_btn.clicked.connect(self.ppiLoadButton)
 
-        find_btn = QPushButton('Найти', self)
-        find_btn.setGeometry(120, 160, 40, 30)
+        find_btn = QPushButton('Счёт в \n интервале', self)
+        find_btn.setGeometry(120, 145, 65, 40)
         find_btn.clicked.connect(self.findSec)
         """
         self.x0_line.setText('0')
@@ -132,9 +131,9 @@ class Example(QMainWindow):
         pupil_btn.setGeometry(480, 80, 100, 30)
         pupil_btn.clicked.connect(self.pupilButton)
 
-        pupil_c_btn = QPushButton('Корреляция pupillabs', self)
-        pupil_c_btn.setGeometry(480, 40, 100, 30)
-        pupil_c_btn.clicked.connect(self.pupilCoreButton)
+        # pupil_c_btn = QPushButton('Корреляция pupillabs', self)
+        # pupil_c_btn.setGeometry(480, 40, 100, 30)
+        # pupil_c_btn.clicked.connect(self.pupilCoreButton)
 
         self.statusBar()
 
@@ -265,7 +264,7 @@ class Example(QMainWindow):
             return
         print('files chosen')
         arg = float(self.arg_line.text())
-        rad = float(self.rad_line.text()) / 2
+        # rad = float(self.rad_line.text()) / 2
         for file in csv_path:
             if not file.__contains__('.csv'):
                 print('cant read file ' + file)
@@ -274,7 +273,7 @@ class Example(QMainWindow):
             section = read_csv_file(file)
             print('parsing file by ' + self.arg_label.text() + ' = ' + self.arg_line.text())
             metrics = ParsedData()
-            metrics.parse(section, self.I, arg, rad)
+            metrics.parse(section, self.I, arg)
             metrics.calc_metrics()
             metrics.to_xls(file.split('/')[-1], self.file_line.text())
             metrics.print_some()
@@ -289,7 +288,7 @@ class Example(QMainWindow):
         arg0 = float(self.arg_0_line.text())
         arg1 = float(self.arg_1_line.text())
         step = float(self.arg_step_line.text())
-        rad = float(self.rad_line.text()) / 2
+        # rad = float(self.rad_line.text()) / 2
 #        diff_list = []
 
         total = len(csv_path) * ((arg1 - arg0)/step).__int__()
@@ -304,12 +303,12 @@ class Example(QMainWindow):
                 print('reading file ' + file)
                 section = read_csv_file(file)
                 metrics = ParsedData()
-                metrics.parse(section, self.I, arg, rad)
+                metrics.parse(section, self.I, arg)
                 metrics.calc_metrics()
                 metrics.to_xls_by_row(file.split('/')[-1], self.file_line.text())
 #                lines.append(metrics.get_line())
                 current += 1
-                print( (float(current) / float(total)).__str__() + " % of progress")
+                print( (float(current) / float(total) * 100.0).__str__() + " % of progress")
             '''
                 print('calculating differences...')
                 diff = [0.0] * len(lines[0])
