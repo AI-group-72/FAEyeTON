@@ -16,7 +16,7 @@ video files for analisyng https://drive.google.com/drive/folders/1q1-hidf9jFaUkV
 ![image](https://user-images.githubusercontent.com/45206030/213150470-0f1925be-abd1-4a5b-b14c-fd473baf90fc.png)
 
 Концептуальная модель:
-![image](https://user-images.githubusercontent.com/45206030/213150267-e4fb946d-c833-40e5-8660-a0b0431d89c0.png)
+![Class Diagram-Страница 11 (2)](https://user-images.githubusercontent.com/45206030/213150957-f4c75221-6ce9-42eb-bc33-f1c9c9bfdcbb.png)
 
 
 device     : 20%
