@@ -16,6 +16,7 @@ class SecondaryMetrics:
         self.short_fix_time = self.long_fix_time = self.med_fix_time = 0
         self.short_fix_count = self.long_fix_count = self.med_fix_count = 0
         self.fix_l_80 = self.fix_g_1000 = self.fix_l_180 = self.fix_g_180 = 0
+        self.fix_l_180_time = self.fix_g_180_time = self.fix_l_180_count = self.fix_g_180_count = 0
 
         self.avr_freq = self.max_freq = self.min_freq = 0
         self.avr_i_speed = self.max_i_speed = 0

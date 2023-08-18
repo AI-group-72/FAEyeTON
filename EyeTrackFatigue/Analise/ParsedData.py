@@ -170,7 +170,7 @@ class ParsedData:
         while self.raw_data.positionData[0].time > fix[fix_i + 1][0]:
             fix_i += 1
         print(fix_i.__str__() + '  ' + self.raw_data.positionData[0].time.__str__() + '  '
-              + fix[fix_i][0].__str__() + ' ' + fix[fix_i][1].__str__())
+              + fix[fix_i][0].__str__(), fix[fix_i][1].__str__())
 
         # print(fix)
 
@@ -243,8 +243,12 @@ class ParsedData:
                 self.secondary.fix_l_80 += 1
             if fix.time > 0.180:
                 self.secondary.fix_g_180 += 1
+                self.secondary.fix_g_180_time += fix.time
+                self.secondary.fix_g_180_count += 1
             if fix.time < 0.180:
                 self.secondary.fix_l_180 += 1
+                self.secondary.fix_l_180_time += fix.time
+                self.secondary.fix_l_180_count += 1
             if fix.time > 1:
                 self.secondary.fix_g_1000 += 1
             if fix.time < 0.150:
@@ -338,6 +342,83 @@ class ParsedData:
 #   35/39
     #   35/39
 
+    def get_row(self, file_name):
+        print('forming a row... ' )
+
+        all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
+        row = [ file_name, self.get_method(),
+                (self.false_fix / self.time_frame * 60).__str__(),
+                (self.pong / self.time_frame * 60).__str__(),
+                (self.secondary.long_sacc / self.time_frame * 60).__str__(),
+                (self.secondary.short_sacc / self.time_frame * 60).__str__(),
+                self.secondary.max_curve.__str__(),
+                (self.secondary.avr_curve / (len(self.fixations) + len(self.saccades))).__str__(),
+                self.secondary.min_curve.__str__(),
+                self.time_frame.__str__(),
+                self.secondary.sacc_time.__str__(),
+                self.secondary.short_fix_time.__str__(),
+                (self.secondary.med_fix_time + self.secondary.long_fix_time).__str__(),
+                self.secondary.med_fix_time.__str__(),
+                self.secondary.long_fix_time.__str__(),
+                self.secondary.fix_l_180_time.__str__(),
+                self.secondary.fix_g_180_time.__str__(),
+                (self.secondary.short_fix_count / all_fix * 100).__str__(),
+                ((1 - self.secondary.short_fix_count / all_fix) * 100).__str__(),
+                (self.secondary.med_fix_count / all_fix * 100).__str__(),
+                (self.secondary.long_fix_count / all_fix * 100).__str__(),
+                (self.secondary.fix_l_180 / all_fix * 100).__str__(),
+                (self.secondary.fix_g_180 / all_fix * 100).__str__(),
+                (self.secondary.short_fix_time / self.time_frame).__str__(),
+                ((self.secondary.med_fix_time + self.secondary.long_fix_time) / self.time_frame).__str__(),
+                (self.secondary.med_fix_time / self.time_frame).__str__(),
+                (self.secondary.long_fix_time / self.time_frame).__str__(),
+                (self.secondary.fix_l_180_time / self.time_frame).__str__(),
+                (self.secondary.fix_g_180_time / self.time_frame).__str__(),
+                (self.secondary.short_fix_count / self.time_frame * 60).__str__(),
+                ((self.secondary.med_fix_count + self.secondary.long_fix_count) / self.time_frame * 60).__str__(),
+                (self.secondary.med_fix_count / self.time_frame * 60).__str__(),
+                (self.secondary.long_fix_count / self.time_frame * 60).__str__(),
+                (self.secondary.fix_l_180 / self.time_frame * 60).__str__(),
+                (self.secondary.fix_g_180 / self.time_frame * 60).__str__(),
+                (len(self.fixations) / self.time_frame).__str__(),
+                self.secondary.avr_freq.__str__(),
+                self.secondary.max_freq.__str__(),
+                self.secondary.avr_acc.__str__(),
+                self.secondary.min_acc.__str__(),
+                self.secondary.max_acc.__str__(),
+                self.avrSpeed.__str__(),
+                self.minSpeed.__str__(),
+                self.maxSpeed.__str__(),
+                self.secondary.avr_i_acc.__str__(),
+                self.secondary.min_i_acc.__str__(),
+                self.secondary.max_i_acc.__str__(),
+                self.secondary.avr_i_speed.__str__(),
+                self.secondary.min_i_speed.__str__(),
+                self.secondary.max_i_speed.__str__(),
+                (self.secondary.fix_distance / self.secondary.fix_time).__str__(),
+                self.secondary.min_f_speed.__str__(),
+                self.secondary.max_f_speed.__str__(),
+                (self.secondary.sacc_distance / self.secondary.sacc_time).__str__(),
+                self.secondary.min_s_speed.__str__(),
+                self.secondary.max_s_speed.__str__(),
+                (self.secondary.sacc_distance / len(self.saccades)).__str__(),
+                self.secondary.min_s_length.__str__(),
+                self.secondary.max_s_length.__str__(),
+                (self.secondary.sacc_time / len(self.saccades)).__str__(),
+                self.secondary.min_s_time.__str__(),
+                self.secondary.max_s_time.__str__(),
+                'none', 'none', 'none']
+        return row
+
+    def to_csv(self, file_name, file_to):
+        print('csv file... ' + file_to)
+        row = self.get_row(file_name)
+        print('appending a row...')
+        with open(file_to, 'a', newline='') as csvfile:
+            _writer = csv.writer(csvfile, delimiter=';')
+            _writer.writerow(row)
+        print('writen')
+
     def to_xls_by_row(self, file_name, file_to):
         print('excel reading file ' + file_to)
         print('excel file preparing ' + file_to)
@@ -363,17 +444,25 @@ class ParsedData:
                 'Time Frame': [self.time_frame],
                 'Saccades time': [self.secondary.sacc_time],
                 'Fixation time < 150 ms': [self.secondary.short_fix_time],
+                'Fixation time > 150 ms': [self.secondary.med_fix_time + self.secondary.long_fix_time],
                 'Fixation time between 150 and 900 ms': [self.secondary.med_fix_time],
                 'Fixation time > 900 ms': [self.secondary.long_fix_time],
+                'Fixation time < 180 ms': [self.secondary.fix_l_180_time],
+                'Fixation time > 180 ms': [self.secondary.fix_g_180_time],
                 '% of Fixations < 150 ms': [self.secondary.short_fix_count / all_fix * 100],
+                '% of Fixations > 150 ms': [(1 - self.secondary.short_fix_count / all_fix) * 100],
                 '% of Fixations between 150 and 900 ms': [self.secondary.med_fix_count / all_fix * 100],
                 '% of Fixations > 900 ms': [self.secondary.long_fix_count / all_fix * 100],
                 '% of Fixations < 180 ms': [self.secondary.fix_l_180 / all_fix * 100],
                 '% of Fixations > 180 ms': [self.secondary.fix_g_180 / all_fix * 100],
-                'Fixation time < 150 ms, per time': [self.secondary.short_fix_time  / self.time_frame],
-                'Fixation time between 150 and 900 ms, per time': [self.secondary.med_fix_time  / self.time_frame],
-                'Fixation time > 900 ms, per time': [self.secondary.long_fix_time  / self.time_frame],
+                'Fixation time < 150 ms, per time': [self.secondary.short_fix_time / self.time_frame],
+                'Fixation time > 150 ms, per time': [(self.secondary.med_fix_time + self.secondary.long_fix_time) / self.time_frame],
+                'Fixation time between 150 and 900 ms, per time': [self.secondary.med_fix_time / self.time_frame],
+                'Fixation time > 900 ms, per time': [self.secondary.long_fix_time / self.time_frame],
+                'Fixation time < 180 ms, per time': [self.secondary.fix_l_180_time / self.time_frame],
+                'Fixation time > 180 ms, per time': [self.secondary.fix_g_180_time / self.time_frame],
                 '% of Fixations < 150 ms, per minute': [self.secondary.short_fix_count / self.time_frame * 60],
+                '% of Fixations > 150 ms, per minute': [(self.secondary.med_fix_count + self.secondary.long_fix_count) / self.time_frame * 60],
                 '% of Fixations between 150 and 900 ms, per minute': [self.secondary.med_fix_count / self.time_frame * 60],
                 '% of Fixations > 900 ms, per minute': [self.secondary.long_fix_count / self.time_frame * 60],
                 '% of Fixations < 180 ms, per minute': [self.secondary.fix_l_180 / self.time_frame * 60],
@@ -426,7 +515,7 @@ class ParsedData:
         print(df.__str__())
 
         all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
-        print(all_fix)
+        # print(all_fix)
 
         new_row = len(df.get('File')) + 1
         update_cell(file_to, new_row, key_index(df, 'File'), file_name)
@@ -452,13 +541,23 @@ class ParsedData:
 
         update_cell(file_to, new_row, key_index(df, 'Fixation time < 150 ms'),
                     self.secondary.short_fix_time)
+        update_cell(file_to, new_row, key_index(df, 'Fixation time > 150 ms'),
+                    self.secondary.med_fix_time + self.secondary.long_fix_time)
+
         update_cell(file_to, new_row, key_index(df, 'Fixation time between 150 and 900 ms'),
                     self.secondary.med_fix_time)
         update_cell(file_to, new_row, key_index(df, 'Fixation time > 900 ms'),
                     self.secondary.long_fix_time)
 
+        update_cell(file_to, new_row, key_index(df, 'Fixation time < 180 ms'),
+                    self.secondary.fix_l_180_time)
+        update_cell(file_to, new_row, key_index(df, 'Fixation time > 180 ms'),
+                    self.secondary.fix_g_180_time)
+
         update_cell(file_to, new_row, key_index(df, '% of Fixations < 150 ms'),
                     self.secondary.short_fix_count / all_fix * 100)
+        update_cell(file_to, new_row, key_index(df, '% of Fixations > 150 ms'),
+                    (1 - self.secondary.short_fix_count / all_fix) * 100)
 
         update_cell(file_to, new_row, key_index(df, '% of Fixations between 150 and 900 ms'),
                     self.secondary.med_fix_count / all_fix * 100)
@@ -476,13 +575,22 @@ class ParsedData:
 
         update_cell(file_to, new_row, key_index(df, 'Fixation time < 150 ms, per time'),
                     self.secondary.short_fix_time / self.time_frame)
+        update_cell(file_to, new_row, key_index(df, 'Fixation time > 150 ms, per time'),
+                    (self.secondary.med_fix_time + self.secondary.long_fix_time) / self.time_frame)
         update_cell(file_to, new_row, key_index(df, 'Fixation time between 150 and 900 ms, per time'),
                     self.secondary.med_fix_time / self.time_frame)
         update_cell(file_to, new_row, key_index(df, 'Fixation time > 900 ms, per time'),
                     self.secondary.long_fix_time / self.time_frame)
 
+        update_cell(file_to, new_row, key_index(df, 'Fixation time < 180 ms, per time'),
+                    self.secondary.fix_l_180_time / self.time_frame)
+        update_cell(file_to, new_row, key_index(df, 'Fixation time > 180 ms, per time'),
+                    self.secondary.fix_g_180_time / self.time_frame)
+
         update_cell(file_to, new_row, key_index(df, 'Fixations < 150 ms, per minute'),
                     self.secondary.short_fix_count / self.time_frame * 60)
+        update_cell(file_to, new_row, key_index(df, 'Fixations > 150 ms, per minute'),
+                    (self.secondary.med_fix_count + self.secondary.long_fix_count) / self.time_frame * 60)
         update_cell(file_to, new_row, key_index(df, 'Fixations between 150 and 900 ms, per minute'),
                     self.secondary.med_fix_count / self.time_frame * 60)
         update_cell(file_to, new_row, key_index(df, 'Fixations > 900 ms, per minute'),
@@ -631,13 +739,15 @@ class ParsedData:
 
         print('finding a row...')
         i = -1
-        temp = 0
+        temp = 1
+        file_from = file_from.split('/')[-1]
         for file_name in df.get('File'):
             if file_name.split('.')[0] == file_from.split('.')[0]:
                 i = temp
             temp += 1
         if i == -1:
-            i = temp
+            print('no such file')
+            return
 
         print('forming ppi')
         ppi = []

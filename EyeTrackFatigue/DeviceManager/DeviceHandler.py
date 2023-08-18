@@ -32,5 +32,4 @@ class DeviceHandler:
             self.data.append([row.__getitem__(i_time), row.__getitem__(i_x), row.__getitem__(i_y)])
             row_count += 1
 
-        print(row_count)
         return self.data

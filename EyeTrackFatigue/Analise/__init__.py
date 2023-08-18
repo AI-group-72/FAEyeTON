@@ -34,6 +34,14 @@ def check_interpolation():
     print(s)
 
 '''
+section = read_csv_file('D:/PythonProjects/Participant 3/22-12-26-game-afternoon.csv')
+metrics = ParsedData()
+metrics.parse(section, 2, 0.1)
+metrics.calc_metrics()
+metrics.to_xls_by_row('test.csv', '../UI/masterfile.xlsx')
+'''
+
+'''
 section = read_csv_file('../test_data1.csv')
 metrics = ParsedData()
 metrics.parse(section, 1, 5, 2.5)
