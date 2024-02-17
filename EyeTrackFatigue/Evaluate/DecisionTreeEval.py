@@ -90,20 +90,20 @@ class DecisionTreeEval(Evaluator):
             print(sum(trY[cross]))
             print(len(teX[cross]))
             print(sum(teY[cross]))
+        # Обучение / Training
         err = 0
         rand = -1
         c = ['gini', 'entropy', 'log_loss']
-        
         now1 = datetime.datetime.now()
         print(now1)
-        for i in range(5):
+        for i in range(100): # перебор случайных состояний / iterating through random states
             print(i)
-            for C in c:
+            for C in c: # Перебор параметров / Iterating through the parameters
                 model = DecisionTreeClassifier(criterion = C, random_state = i)
                 f = 0
                 acc = 0
                 cur_f = 0
-                for cross in range(5):
+                for cross in range(5): # Кроссвалидированное обучение / Cross-validated training
                     test_X = teX[cross]
                     test_Y = teY[cross]
                     train_X = trX[cross]
@@ -111,7 +111,7 @@ class DecisionTreeEval(Evaluator):
                     model.fit(train_X, train_Y)
                     y_pred = model.predict(test_X)
                     _f = f1_score(test_Y, y_pred)
-                    #if _f < 0.60 or _f < (cur_f-0.15):
+                    #if _f < 0.60 or _f < (cur_f-0.15): # Досрочное отбрасываение - опционально, для оптимизации
                      #   break
                     if _f > cur_f:
                         cr = cross
@@ -119,7 +119,8 @@ class DecisionTreeEval(Evaluator):
                     acc += accuracy_score(test_Y, y_pred)
                 f = f / 5
                 acc = acc / 5
-                if f > err:
+                if f > err:# Сравнение текущей модели с лучшей / Comparing the current model with the best one
+                    # Cохранение параметров и показателей / Saving parameters and indicators
                     rand = i
                     err = f
                     crit = C
@@ -129,17 +130,19 @@ class DecisionTreeEval(Evaluator):
         
         now = datetime.datetime.now()
         print(now)
+        # Время окончания обучения / Training end timestamp 
         print('Total time:', now - now1)
         test_X = teX[cross]
         test_Y = teY[cross]
         train_X = trX[cross]
         train_Y = trY[cross]
+        # обучение модели по параметрам лучший / training the model according to the best parameters
         self.model = DecisionTreeClassifier(criterion = crit, random_state = i)
         self.model.fit(train_X, train_Y)
         y_pred = self.model.predict(test_X)
-        self.acc = accuracy_score(test_Y, y_pred)
-        self.f1 = f1_score(test_Y, y_pred)
-        self.cross_f1 = err
+        self.f1 = f1_score(test_Y, y_pred) # результаты по одному из разбиений / results for one sample
+        self.acc = accuracy_score(test_Y, y_pred)  
+        self.cross_f1 = err # усреднённые результаты по всем разбиениям / averaged results for all samples
         self.cross_acc = cross_acc
 
     def edu_args(self, train_X, train_Y, test_X, test_Y, rand, n_e, cr):

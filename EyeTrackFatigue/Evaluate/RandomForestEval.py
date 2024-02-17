@@ -2,10 +2,7 @@ import datetime
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
-    confusion_matrix,
     accuracy_score,
-    precision_score,
-    recall_score,
     f1_score
 )
 
@@ -83,20 +80,20 @@ class RandomForestEval(Evaluator):
             print(sum(trY[cross]))
             print(len(teX[cross]))
             print(sum(teY[cross]))
-
+        # Обучение / Training
         rand = -1
         c = ['gini', 'entropy', 'log_loss']
         n = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
         err = 0
-        for i in range(5):
+        for i in range(100):  # перебор случайных состояний / iterating through random states
             print(i)
-            for N in n:
-                for C in c:
+            for N in n:  # Перебор параметров / Iterating through the parameters
+                for C in c:  # Перебор параметров / Iterating through the parameters
                     model = RandomForestClassifier(n_estimators = N , criterion = C, random_state = i)
                     f = 0
                     acc = 0
                     cur_f = 0
-                    for cross in range(5):
+                    for cross in range(5): # Кроссвалидированное обучение / Cross-validated training
                         test_X = teX[cross]
                         test_Y = teY[cross]
                         train_X = trX[cross]
@@ -104,13 +101,14 @@ class RandomForestEval(Evaluator):
                         model.fit(train_X, train_Y)
                         y_pred = model.predict(test_X)
                         _f = f1_score(test_Y, y_pred)
-                        if _f < 0.60 or _f < (cur_f-0.15):
+                        if _f < 0.60 or _f < (cur_f-0.15): # Досрочное отбрасываение - опционально, для оптимизации
                             break
                         f += _f
                         acc += accuracy_score(test_Y, y_pred)
                     f = f / 5
                     acc = acc / 5
-                    if f > err:
+                    if f > err: # Сравнение текущей модели с лучшей / Comparing the current model with the best one
+                        # Cохранение параметров и показателей / Saving parameters and indicators
                         print(f)
                         rand = i
                         err = f
@@ -123,17 +121,19 @@ class RandomForestEval(Evaluator):
 
         now = datetime.datetime.now()
         print(now)
+        # Время окончания обучения / Training end timestamp 
         print('Total time:', now - now1)
         test_X = teX[cross]
         test_Y = teY[cross]
         train_X = trX[cross]
         train_Y = trY[cross]
+        # обучение модели по параметрам лучший / training the model according to the best parameters
         self.model = RandomForestClassifier(n_estimators = n_e, criterion = cr, random_state = rand)
         self.model.fit(train_X, train_Y)
         y_pred = self.model.predict(test_X)
-        self.acc = accuracy_score(test_Y, y_pred)
-        self.f1 = f1_score(test_Y, y_pred)
-        self.cross_f1 = err
+        self.f1 = f1_score(test_Y, y_pred) # результаты по одному из разбиений / results for one sample
+        self.acc = accuracy_score(test_Y, y_pred)  
+        self.cross_f1 = err # усреднённые результаты по всем разбиениям / averaged results for all samples
         self.cross_acc = cross_acc
 
     def edu_args(self, train_X, train_Y, test_X, test_Y, rand, n_e, cr):

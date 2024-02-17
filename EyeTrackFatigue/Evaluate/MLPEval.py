@@ -154,8 +154,8 @@ class MLPEval(Evaluator):
         self.model = MLPClassifier(solver=S, activation = Ac, alpha=1e-5, hidden_layer_sizes=(h), random_state=rand)
         self.model.fit(train_X, train_Y)
         y_pred = self.model.predict(test_X)
-        self.acc = accuracy_score(test_Y, y_pred) # результаты по одному из разбиений / results for one sample
-        self.f1 = f1_score(test_Y, y_pred)
+        self.f1 = f1_score(test_Y, y_pred) # результаты по одному из разбиений / results for one sample
+        self.acc = accuracy_score(test_Y, y_pred)         
         self.cross_f1 = err # усреднённые результаты по всем разбиениям / averaged results for all samples
         self.cross_acc = cross_acc
 
