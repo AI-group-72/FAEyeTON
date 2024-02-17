@@ -2,10 +2,10 @@ import math
 from pandas import read_excel, concat, DataFrame
 from openpyxl import load_workbook
 import csv
-
+import numpy as np
 from Analise.EyeMovements import Movement
+from Analise.GeoMetrics import GeoMetrics
 from Analise.SecondaryMetrics import SecondaryMetrics
-
 
 class ParsedData:
     def __init__(self):
@@ -46,6 +46,7 @@ class ParsedData:
         self.raw_data = input_section
         self.center_radius = center_radius
         self.dots = len(input_section.positionData)
+        self.sep_geo(input_section.FOV)
         self.time_frame = input_section.time_frame()
         self.minSpeed = min(input_section.velocityData)
         self.maxSpeed = max(input_section.velocityData)
@@ -97,9 +98,17 @@ class ParsedData:
             return 'area size ' + self.args.__str__()
         self.method = 0
         return 'speed ' + self.args.__str__()
+    
+    # Выделение нормированного X и Y 
+    def sep_geo(self, FOV):  
+        self.dots_X = []
+        self.dots_Y = []
+        for i in range(0, len(self.raw_data.positionData)):
+            self.dots_X.append(self.raw_data.positionData[i].x / FOV)
+            self.dots_Y.append(self.raw_data.positionData[i].y / FOV)
 
-    # Алгоритм Владислава. Расстояние между любыми двумя последовательными точками,
-    # которое является оценкой скорости движения глаз (Shic, Scassellati, & Chawarska, 2008).
+    # Алгоритм 1. Определение стратегий по скорости движения глаз между любыми двумя последовательными точками,
+    # (Shic, Scassellati, & Chawarska, 2008).
 
     def get_fixation_by_speed_threshold(self, max_speed):
         print('max_speed ' + max_speed.__str__())
@@ -109,8 +118,9 @@ class ParsedData:
                 self.flag.append('s')
             else:
                 self.flag.append('f')
-
-    # Алгоритм Александра. Расстояние между точками и центром фиксации, т. е. радиус.
+    
+    
+    # Алгоритм 2. Определение стратегий по расстоянию между точками и центром фиксации, т.е. её радиусу.
     # (Camilli, Terenzi, & Nocera, 2008)
 
     def get_fixation_by_area(self, area_size):
@@ -129,7 +139,10 @@ class ParsedData:
                     self.flag.append('f')
                     fix_area = self.raw_data.positionData[i - 1]
 
-    # Максимальное расстояние по горизонтали и вертикали, покрываемое позициями взгляда при фиксации
+    # Алгоритм 3. Определение стратегий по максимальному расстоянию по горизонтали и вертикали,
+    # покрываемому позициями взгляда при фиксации
+    # Algorithm 3 Determination of strategies based on the maximum horizontal and vertical distance,
+    # covered by the gaze positions inside fixation
     # (Salvucci & Goldberg). , 2000).
 
     def get_fixation_by_abs_dist(self, dist):
@@ -141,7 +154,7 @@ class ParsedData:
             min_x = min(min_x, self.raw_data.positionData[i].x)
             max_y = max(max_y, self.raw_data.positionData[i].y)
             min_y = min(min_y, self.raw_data.positionData[i].y)
-            if math.sqrt(pow(max_x - min_x, 2) + pow(max_y - min_y, 2)) > dist:
+            if math.sqrt(pow(max_x - min_x, 2) + pow(max_y - min_y, 2)) > dist: # проверка порога / treshhold check
                 self.flag.append('s')
                 max_x = min_x = self.raw_data.positionData[i].x
                 max_y = min_y = self.raw_data.positionData[i].y
@@ -226,6 +239,28 @@ class ParsedData:
 
     def calc_metrics(self):
         self.secondary = SecondaryMetrics()
+        self.geo = GeoMetrics()
+
+        # -----------------#
+        x = np.array(self.dots_X)
+        self.geo.x_mean = np.mean(x).reshape(1, 1)[0][0]
+        self.geo.x_std = np.std(x).reshape(1, 1)[0][0]
+        self.geo.x_min = np.min(x).reshape(1, 1)[0][0]
+        self.geo.x_max = np.max(x).reshape(1, 1)[0][0]
+        self.geo.x_25 = np.percentile(x, 25).reshape(1, 1)[0][0]
+        self.geo.x_50 = np.percentile(x, 50).reshape(1, 1)[0][0]
+        self.geo.x_75 = np.percentile(x, 75).reshape(1, 1)[0][0]
+        # -----------------#
+        y = np.array(self.dots_Y)
+        self.geo.y_mean = np.mean(y).reshape(1, 1)[0][0]
+        self.geo.y_std = np.std(y).reshape(1, 1)[0][0]
+        self.geo.y_min = np.min(y).reshape(1, 1)[0][0]
+        self.geo.y_max = np.max(y).reshape(1, 1)[0][0]
+        self.geo.y_25 = np.percentile(y, 25).reshape(1, 1)[0][0]
+        self.geo.y_50 = np.percentile(y, 50).reshape(1, 1)[0][0]
+        self.geo.y_75 = np.percentile(y, 75).reshape(1, 1)[0][0]
+        # -----------------#
+
         print('computing metrics...')
         print('fixations...')
 
@@ -236,9 +271,10 @@ class ParsedData:
             self.secondary.fix_distance += fix.get_distance()
             self.secondary.max_f_speed = max(self.secondary.max_f_speed, fix.get_avr_speed())
             self.secondary.min_f_speed = min(self.secondary.min_f_speed, fix.get_avr_speed())
-            self.secondary.min_curve = min(self.secondary.min_curve, fix.get_curve())
-            self.secondary.max_curve = min(self.secondary.max_curve, fix.get_curve())
-            self.secondary.avr_curve += fix.get_curve()
+            # self.secondary.min_curve = min(self.secondary.min_curve, fix.get_curve())
+            # self.secondary.max_curve = min(self.secondary.max_curve, fix.get_curve())
+            # self.secondary.avr_curve += fix.get_curve()
+            # spd = S / T = (S1 + S2 + S3) / (T1 + T2 + T3)
             if fix.time < 0.80:
                 self.secondary.fix_l_80 += 1
             if fix.time > 0.180:
@@ -248,18 +284,27 @@ class ParsedData:
             if fix.time < 0.180:
                 self.secondary.fix_l_180 += 1
                 self.secondary.fix_l_180_time += fix.time
-                self.secondary.fix_l_180_count += 1
+                self.secondary.fix_l_180_count += 1 
             if fix.time > 1:
                 self.secondary.fix_g_1000 += 1
             if fix.time < 0.150:
                 self.secondary.short_fix_time += fix.time
                 self.secondary.short_fix_count += 1
+                self.secondary.fix_l_150_dist += fix.get_distance()
+                self.secondary.max_sf_speed = max(self.secondary.max_sf_speed, fix.get_avr_speed())
+                self.secondary.min_sf_speed = min(self.secondary.min_sf_speed, fix.get_avr_speed())
             if 0.150 <= fix.time <= 0.900:
                 self.secondary.med_fix_time += fix.time
                 self.secondary.med_fix_count += 1
+                self.secondary.fix_g_150_dist += fix.get_distance()
+                self.secondary.max_lf_speed = max(self.secondary.max_lf_speed, fix.get_avr_speed())
+                self.secondary.min_lf_speed = min(self.secondary.min_lf_speed, fix.get_avr_speed())
             if fix.time > 0.900:
                 self.secondary.long_fix_time += fix.time
                 self.secondary.long_fix_count += 1
+                self.secondary.fix_g_150_dist += fix.get_distance()
+                self.secondary.max_lf_speed = max(self.secondary.max_lf_speed, fix.get_avr_speed())
+                self.secondary.min_lf_speed = min(self.secondary.min_lf_speed, fix.get_avr_speed())
 
         print('saccades...')
         for sacc in self.saccades:
@@ -344,71 +389,8 @@ class ParsedData:
 
     def get_row(self, file_name):
         print('forming a row... ' )
-
-        all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
-        row = [ file_name, self.get_method(),
-                (self.false_fix / self.time_frame * 60).__str__(),
-                (self.pong / self.time_frame * 60).__str__(),
-                (self.secondary.long_sacc / self.time_frame * 60).__str__(),
-                (self.secondary.short_sacc / self.time_frame * 60).__str__(),
-                self.secondary.max_curve.__str__(),
-                (self.secondary.avr_curve / (len(self.fixations) + len(self.saccades))).__str__(),
-                self.secondary.min_curve.__str__(),
-                self.time_frame.__str__(),
-                self.secondary.sacc_time.__str__(),
-                self.secondary.short_fix_time.__str__(),
-                (self.secondary.med_fix_time + self.secondary.long_fix_time).__str__(),
-                self.secondary.med_fix_time.__str__(),
-                self.secondary.long_fix_time.__str__(),
-                self.secondary.fix_l_180_time.__str__(),
-                self.secondary.fix_g_180_time.__str__(),
-                (self.secondary.short_fix_count / all_fix * 100).__str__(),
-                ((1 - self.secondary.short_fix_count / all_fix) * 100).__str__(),
-                (self.secondary.med_fix_count / all_fix * 100).__str__(),
-                (self.secondary.long_fix_count / all_fix * 100).__str__(),
-                (self.secondary.fix_l_180 / all_fix * 100).__str__(),
-                (self.secondary.fix_g_180 / all_fix * 100).__str__(),
-                (self.secondary.short_fix_time / self.time_frame).__str__(),
-                ((self.secondary.med_fix_time + self.secondary.long_fix_time) / self.time_frame).__str__(),
-                (self.secondary.med_fix_time / self.time_frame).__str__(),
-                (self.secondary.long_fix_time / self.time_frame).__str__(),
-                (self.secondary.fix_l_180_time / self.time_frame).__str__(),
-                (self.secondary.fix_g_180_time / self.time_frame).__str__(),
-                (self.secondary.short_fix_count / self.time_frame * 60).__str__(),
-                ((self.secondary.med_fix_count + self.secondary.long_fix_count) / self.time_frame * 60).__str__(),
-                (self.secondary.med_fix_count / self.time_frame * 60).__str__(),
-                (self.secondary.long_fix_count / self.time_frame * 60).__str__(),
-                (self.secondary.fix_l_180 / self.time_frame * 60).__str__(),
-                (self.secondary.fix_g_180 / self.time_frame * 60).__str__(),
-                (len(self.fixations) / self.time_frame).__str__(),
-                self.secondary.avr_freq.__str__(),
-                self.secondary.max_freq.__str__(),
-                self.secondary.avr_acc.__str__(),
-                self.secondary.min_acc.__str__(),
-                self.secondary.max_acc.__str__(),
-                self.avrSpeed.__str__(),
-                self.minSpeed.__str__(),
-                self.maxSpeed.__str__(),
-                self.secondary.avr_i_acc.__str__(),
-                self.secondary.min_i_acc.__str__(),
-                self.secondary.max_i_acc.__str__(),
-                self.secondary.avr_i_speed.__str__(),
-                self.secondary.min_i_speed.__str__(),
-                self.secondary.max_i_speed.__str__(),
-                (self.secondary.fix_distance / self.secondary.fix_time).__str__(),
-                self.secondary.min_f_speed.__str__(),
-                self.secondary.max_f_speed.__str__(),
-                (self.secondary.sacc_distance / self.secondary.sacc_time).__str__(),
-                self.secondary.min_s_speed.__str__(),
-                self.secondary.max_s_speed.__str__(),
-                (self.secondary.sacc_distance / len(self.saccades)).__str__(),
-                self.secondary.min_s_length.__str__(),
-                self.secondary.max_s_length.__str__(),
-                (self.secondary.sacc_time / len(self.saccades)).__str__(),
-                self.secondary.min_s_time.__str__(),
-                self.secondary.max_s_time.__str__(),
-                'none', 'none', 'none']
-        return row
+        
+        return self.get_df_row(file_name).loc[0, :].values.flatten().tolist()
 
     def to_csv(self, file_name, file_to):
         print('csv file... ' + file_to)
@@ -418,6 +400,101 @@ class ParsedData:
             _writer = csv.writer(csvfile, delimiter=';')
             _writer.writerow(row)
         print('writen')
+
+    def get_df_row(self, file='none'):
+        all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
+
+        df_row = DataFrame({'File' : [file],
+                            'x_mean' : [self.geo.x_mean],
+                            'x_std' : [self.geo.x_std],
+                            'x_min' : [self.geo.x_min],
+                            'x_max' : [self.geo.x_max],
+                            'x_25' : [self.geo.x_25],
+                            'x_50' : [self.geo.x_50],
+                            'x_75' : [self.geo.x_75],
+                            'y_mean' : [self.geo.y_mean],
+                            'y_std' : [self.geo.y_std],
+                            'y_min' : [self.geo.y_min],
+                            'y_max' : [self.geo.y_max],
+                            'y_25' : [self.geo.y_25],
+                            'y_50' : [self.geo.y_50],
+                            'y_75' : [self.geo.y_75],
+                            'False Fixation, per minute': [self.false_fix / self.time_frame * 60],
+                            'False Saccades, per minute': [self.pong / self.time_frame * 60],
+                            'Saccades with amplitude > 6 degrees, per minute': [
+                                self.secondary.long_sacc / self.time_frame * 60],
+                            'Saccades with amplitude < 6 degrees, per minute': [
+                                self.secondary.short_sacc / self.time_frame * 60],
+                            'Max Curve': [self.secondary.max_curve],
+                            'Average Curve': [self.secondary.avr_curve / (len(self.fixations) + len(self.saccades))],
+                            'Min Curve': [self.secondary.min_curve],
+                            'Time Frame': [self.time_frame],
+                            'Saccades time': [self.secondary.sacc_time],
+                            'Fixation time < 150 ms': [self.secondary.short_fix_time],
+                            'Fixation time > 150 ms': [self.secondary.med_fix_time + self.secondary.long_fix_time],
+                            'Fixation time between 150 and 900 ms': [self.secondary.med_fix_time],
+                            'Fixation time > 900 ms': [self.secondary.long_fix_time],
+                            'Fixation time < 180 ms': [self.secondary.fix_l_180_time],
+                            'Fixation time > 180 ms': [self.secondary.fix_g_180_time],
+                            '% of Fixations < 150 ms': [self.secondary.short_fix_count / all_fix * 100 if all_fix > 0 else -1],
+                            '% of Fixations > 150 ms': [(1 - self.secondary.short_fix_count / all_fix) * 100 if all_fix > 0 else -1],
+                            '% of Fixations between 150 and 900 ms': [self.secondary.med_fix_count / all_fix * 100 if all_fix > 0 else -1],
+                            '% of Fixations > 900 ms': [self.secondary.long_fix_count / all_fix * 100 if all_fix > 0 else -1],
+                            '% of Fixations < 180 ms': [self.secondary.fix_l_180 / all_fix * 100 if all_fix > 0 else -1],
+                            '% of Fixations > 180 ms': [self.secondary.fix_g_180 / all_fix * 100 if all_fix > 0 else -1],
+                            'Fixation time < 150 ms, per time': [self.secondary.short_fix_time / self.time_frame],
+                            'Fixation time > 150 ms, per time': [
+                                (self.secondary.med_fix_time + self.secondary.long_fix_time) / self.time_frame],
+                            'Fixation time between 150 and 900 ms, per time': [
+                                self.secondary.med_fix_time / self.time_frame],
+                            'Fixation time > 900 ms, per time': [self.secondary.long_fix_time / self.time_frame],
+                            'Fixation time < 180 ms, per time': [self.secondary.fix_l_180_time / self.time_frame],
+                            'Fixation time > 180 ms, per time': [self.secondary.fix_g_180_time / self.time_frame],
+                            '% of Fixations < 150 ms, per minute': [
+                                self.secondary.short_fix_count / self.time_frame * 60],
+                            '% of Fixations > 150 ms, per minute': [
+                                (self.secondary.med_fix_count + self.secondary.long_fix_count) / self.time_frame * 60],
+                            '% of Fixations between 150 and 900 ms, per minute': [
+                                self.secondary.med_fix_count / self.time_frame * 60],
+                            '% of Fixations > 900 ms, per minute': [
+                                self.secondary.long_fix_count / self.time_frame * 60],
+                            '% of Fixations < 180 ms, per minute': [self.secondary.fix_l_180 / self.time_frame * 60],
+                            '% of Fixations > 180 ms, per minute': [self.secondary.fix_g_180 / self.time_frame * 60],
+                            'Fixation Frequency': [len(self.fixations) / self.time_frame],
+                            'Average Fix Frequency in interval (1s)': [self.secondary.avr_freq],
+                            'Max Fix Frequency in interval (1s)': [self.secondary.max_freq],
+                            'Average Acceleration': [self.secondary.avr_acc],
+                            'Min Acceleration': [self.secondary.min_acc],
+                            'Max Acceleration': [self.secondary.max_acc],
+                            'Average Speed': [self.avrSpeed],
+                            'Min Speed': [self.minSpeed],
+                            'Max Speed': [self.maxSpeed],
+                            'Average Acceleration in interval (1s)': [self.secondary.avr_i_acc],
+                            'Min Acceleration in interval (1s)': [self.secondary.min_i_acc],
+                            'Max Acceleration in interval (1s)': [self.secondary.max_i_acc],
+                            'Average Speed in interval (1s)': [self.secondary.avr_i_speed],
+                            'Min Speed in interval (1s)': [self.secondary.min_i_speed],
+                            'Max Speed in interval (1s)': [self.secondary.max_i_speed],
+                            'Average Fixation Speed': [self.secondary.fix_distance / self.secondary.fix_time if self.secondary.fix_time > 0 else - 1],
+                            'Min Fixation Speed': [self.secondary.min_f_speed],
+                            'Max Fixation Speed': [self.secondary.max_f_speed],
+                            'Average Fixation Speed, < 150ms': [self.secondary.fix_l_150_dist / self.secondary.short_fix_time if self.secondary.short_fix_time > 0 else - 1],
+                            'Min Fixation Speed, < 150ms': [self.secondary.min_sf_speed],
+                            'Max Fixation Speed, < 150ms': [self.secondary.max_sf_speed],
+                            'Average Fixation Speed, > 150ms': [self.secondary.fix_g_150_dist / (self.secondary.med_fix_time + self.secondary.long_fix_time) if (self.secondary.med_fix_time + self.secondary.long_fix_time) != 0 else -1],
+                            'Min Fixation Speed, > 150ms': [self.secondary.min_lf_speed],
+                            'Max Fixation Speed, > 150ms': [self.secondary.max_lf_speed],
+                            'Average Saccade Speed': [self.secondary.sacc_distance / self.secondary.sacc_time if self.secondary.sacc_time > 0 else - 1],
+                            'Min Saccade Speed': [self.secondary.min_s_speed],
+                            'Max Saccade Speed': [self.secondary.max_s_speed],
+                            'Average Saccade Length': [self.secondary.sacc_distance / len(self.saccades) if len(self.saccades) > 0 else - 1],
+                            'Min Saccade Length': [self.secondary.min_s_length],
+                            'Max Saccade Length': [self.secondary.max_s_length],
+                            'Average Saccade Time': [self.secondary.sacc_time / len(self.saccades) if len(self.saccades) > 0 else - 1],
+                            'Min Saccade Time': [self.secondary.min_s_time],
+                            'Max Saccade Time': [self.secondary.max_s_time]
+                            })
+        return df_row
 
     def to_xls_by_row(self, file_name, file_to):
         print('excel reading file ' + file_to)
@@ -430,74 +507,7 @@ class ParsedData:
         print('forming a row...')
         #   35/39
 
-        all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
-
-        df_row = DataFrame({'File': [file_name],
-                'Method': [self.get_method()],
-                'False Fixation, per minute': [self.false_fix / self.time_frame * 60],
-                'False Saccades, per minute': [self.pong / self.time_frame * 60],
-                'Saccades with amplitude > 6 degrees, per minute': [self.secondary.long_sacc / self.time_frame * 60],
-                'Saccades with amplitude < 6 degrees, per minute': [self.secondary.short_sacc / self.time_frame * 60],
-                'Max Curve': [self.secondary.max_curve],
-                'Average Curve': [self.secondary.avr_curve / (len(self.fixations) + len(self.saccades))],
-                'Min Curve': [self.secondary.min_curve],
-                'Time Frame': [self.time_frame],
-                'Saccades time': [self.secondary.sacc_time],
-                'Fixation time < 150 ms': [self.secondary.short_fix_time],
-                'Fixation time > 150 ms': [self.secondary.med_fix_time + self.secondary.long_fix_time],
-                'Fixation time between 150 and 900 ms': [self.secondary.med_fix_time],
-                'Fixation time > 900 ms': [self.secondary.long_fix_time],
-                'Fixation time < 180 ms': [self.secondary.fix_l_180_time],
-                'Fixation time > 180 ms': [self.secondary.fix_g_180_time],
-                '% of Fixations < 150 ms': [self.secondary.short_fix_count / all_fix * 100],
-                '% of Fixations > 150 ms': [(1 - self.secondary.short_fix_count / all_fix) * 100],
-                '% of Fixations between 150 and 900 ms': [self.secondary.med_fix_count / all_fix * 100],
-                '% of Fixations > 900 ms': [self.secondary.long_fix_count / all_fix * 100],
-                '% of Fixations < 180 ms': [self.secondary.fix_l_180 / all_fix * 100],
-                '% of Fixations > 180 ms': [self.secondary.fix_g_180 / all_fix * 100],
-                'Fixation time < 150 ms, per time': [self.secondary.short_fix_time / self.time_frame],
-                'Fixation time > 150 ms, per time': [(self.secondary.med_fix_time + self.secondary.long_fix_time) / self.time_frame],
-                'Fixation time between 150 and 900 ms, per time': [self.secondary.med_fix_time / self.time_frame],
-                'Fixation time > 900 ms, per time': [self.secondary.long_fix_time / self.time_frame],
-                'Fixation time < 180 ms, per time': [self.secondary.fix_l_180_time / self.time_frame],
-                'Fixation time > 180 ms, per time': [self.secondary.fix_g_180_time / self.time_frame],
-                '% of Fixations < 150 ms, per minute': [self.secondary.short_fix_count / self.time_frame * 60],
-                '% of Fixations > 150 ms, per minute': [(self.secondary.med_fix_count + self.secondary.long_fix_count) / self.time_frame * 60],
-                '% of Fixations between 150 and 900 ms, per minute': [self.secondary.med_fix_count / self.time_frame * 60],
-                '% of Fixations > 900 ms, per minute': [self.secondary.long_fix_count / self.time_frame * 60],
-                '% of Fixations < 180 ms, per minute': [self.secondary.fix_l_180 / self.time_frame * 60],
-                '% of Fixations > 180 ms, per minute': [self.secondary.fix_g_180 / self.time_frame * 60],
-                'Fixation Frequency': [len(self.fixations) / self.time_frame],
-                'Average Fix Frequency in interval (1s)': [self.secondary.avr_freq],
-                'Max Fix Frequency in interval (1s)': [self.secondary.max_freq],
-                'Average Acceleration': [self.secondary.avr_acc],
-                'Min Acceleration': [self.secondary.min_acc],
-                'Max Acceleration': [self.secondary.max_acc],
-                'Average Speed': [self.avrSpeed],
-                'Min Speed': [self.minSpeed],
-                'Max Speed': [self.maxSpeed],
-                'Average Acceleration in interval (1s)': [self.secondary.avr_i_acc],
-                'Min Acceleration in interval (1s)': [self.secondary.min_i_acc],
-                'Max Acceleration in interval (1s)': [self.secondary.max_i_acc],
-                'Average Speed in interval (1s)': [self.secondary.avr_i_speed],
-                'Min Speed in interval (1s)': [self.secondary.min_i_speed],
-                'Max Speed in interval (1s)': [self.secondary.max_i_speed],
-                'Average Fixation Speed': [self.secondary.fix_distance / self.secondary.fix_time],
-                'Min Fixation Speed': [self.secondary.min_f_speed],
-                'Max Fixation Speed': [self.secondary.max_f_speed],
-                'Average Saccade Speed': [self.secondary.sacc_distance / self.secondary.sacc_time],
-                'Min Saccade Speed': [self.secondary.min_s_speed],
-                'Max Saccade Speed': [self.secondary.max_s_speed],
-                'Average Saccade Length': [self.secondary.sacc_distance / len(self.saccades)],
-                'Min Saccade Length': [self.secondary.min_s_length],
-                'Max Saccade Length': [self.secondary.max_s_length],
-                'Average Saccade Time': [self.secondary.sacc_time / len(self.saccades)],
-                'Min Saccade Time': [self.secondary.min_s_time],
-                'Max Saccade Time': [self.secondary.max_s_time],
-                'Average PPI': ['none'],
-                'Max PPI': ['none'],
-                'Min PPI': ['none']
-                                })
+        df_row = self.get_df_row(file_name)
 
         print('appending a row...')
         df = concat([df, df_row], ignore_index=True)
@@ -507,6 +517,8 @@ class ParsedData:
         print('writen')
 
     def to_xls(self, file_name, file_to):
+        print('Not effective')
+        return
         print('excel reading file ' + file_to)
         print('excel file preparing ' + file_to)
         print('forming headline...')
@@ -625,6 +637,16 @@ class ParsedData:
                     self.secondary.fix_distance / self.secondary.fix_time)
         update_cell(file_to, new_row, key_index(df, 'Min Fixation Speed'), self.secondary.min_f_speed)
         update_cell(file_to, new_row, key_index(df, 'Max Fixation Speed'), self.secondary.max_f_speed)
+        
+        update_cell(file_to, new_row, key_index(df, 'Average Fixation Speed, < 150ms'),
+                    self.secondary.fix_l_150_dist / self.secondary.short_fix_time)
+        update_cell(file_to, new_row, key_index(df, 'Min Fixation Speed, < 150ms'), self.secondary.min_sf_speed)
+        update_cell(file_to, new_row, key_index(df, 'Max Fixation Speed, < 150ms'), self.secondary.max_sf_speed)
+
+        update_cell(file_to, new_row, key_index(df, 'Average Fixation Speed, > 150ms'),
+                    self.secondary.fix_g_150_dist / (self.secondary.med_fix_time + self.secondary.long_fix_time))
+        update_cell(file_to, new_row, key_index(df, 'Min Fixation Speed, > 150ms'), self.secondary.min_lf_speed)
+        update_cell(file_to, new_row, key_index(df, 'Max Fixation Speed, > 150ms'), self.secondary.max_lf_speed)
 
         update_cell(file_to, new_row, key_index(df, 'Average Saccade Speed'),
                     self.secondary.sacc_distance / self.secondary.sacc_time)
@@ -646,90 +668,6 @@ class ParsedData:
         update_cell(file_to, new_row, key_index(df, 'Max PPI'), 'none')
 
         print('writen')
-
-    def get_line(self):
-        all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
-
-        print('forming line...')
-        line = []
-        line.append(self.false_fix / self.time_frame * 60)
-        line.append(self.pong / self.time_frame * 60)
-
-        line.append(self.secondary.long_sacc / self.time_frame * 60)
-        line.append(self.secondary.short_sacc / self.time_frame * 60)
-
-        line.append(self.secondary.max_curve)
-        line.append(self.secondary.avr_curve / (len(self.fixations) + len(self.saccades)))
-        line.append(self.secondary.min_curve)
-
-        line.append(self.time_frame)
-        line.append(self.secondary.sacc_time)
-
-        line.append(self.secondary.short_fix_time)
-        line.append(self.secondary.med_fix_time)
-        line.append(self.secondary.long_fix_time)
-
-        line.append(self.secondary.short_fix_count / all_fix * 100)
-        line.append(self.secondary.med_fix_count / all_fix * 100)
-        line.append(self.secondary.long_fix_count / all_fix * 100)
-
-        line.append(self.secondary.fix_l_180 / all_fix * 100)
-        line.append(self.secondary.fix_g_180 / all_fix * 100)
-
-        # , per minute
-
-        line.append(self.secondary.short_fix_time / self.time_frame)
-        line.append(self.secondary.med_fix_time / self.time_frame)
-        line.append(self.secondary.long_fix_time / self.time_frame)
-
-        line.append(self.secondary.short_fix_count / self.time_frame * 60)
-        line.append(self.secondary.med_fix_count / self.time_frame * 60)
-        line.append(self.secondary.long_fix_count / self.time_frame * 60)
-
-        line.append(self.secondary.fix_l_180 / self.time_frame * 60)
-        line.append(self.secondary.fix_g_180 / self.time_frame * 60)
-
-        line.append(len(self.fixations) / self.time_frame)
-
-        line.append(self.secondary.avr_freq)
-        line.append(self.secondary.max_freq)
-
-#       line.append(self.secondary.min_freq) always = 0
-
-        line.append(self.secondary.avr_acc)
-        line.append(self.secondary.min_acc)
-        line.append(self.secondary.max_acc)
-
-        line.append(self.avrSpeed)
-        line.append(self.minSpeed)
-        line.append(self.maxSpeed)
-
-        line.append(self.secondary.avr_i_acc)
-        line.append(self.secondary.min_i_acc)
-        line.append(self.secondary.max_i_acc)
-
-        line.append(self.secondary.avr_i_speed)
-        line.append(self.secondary.min_i_speed)
-        line.append(self.secondary.max_i_speed)
-
-        line.append(self.secondary.fix_distance / self.secondary.fix_time)
-        line.append(self.secondary.min_f_speed)
-        line.append(self.secondary.max_f_speed)
-
-        line.append(self.secondary.sacc_distance / self.secondary.sacc_time)
-        line.append(self.secondary.min_s_speed)
-        line.append(self.secondary.max_s_speed)
-
-        line.append(self.secondary.sacc_distance / len(self.saccades))
-        line.append(self.secondary.min_s_length)
-        line.append(self.secondary.max_s_length)
-
-        line.append(self.secondary.sacc_time / len(self.saccades))
-        line.append(self.secondary.min_s_time)
-        line.append(self.secondary.max_s_time)
-
-        print('line formed')
-        return line
 
     @staticmethod
     def ppi_to_xls(file_from, lines, file_to):
@@ -802,31 +740,89 @@ class ParsedData:
     def get_section(self):
         return self.raw_data
 
-    def print_some(self):
-        max_dist = 0
-        avr_dist = 0
-        max_area = 0
-        avr_area = 0
-        max_fix_speed = 0
-        avr_fix_speed = 0
-        fix_count = len(self.fixations)
-        for fix in self.fixations:
-            max_dist = max(max_dist, fix.get_max_dist())
-            avr_dist += fix.get_max_dist()
-            max_area = max(max_area, fix.get_area_dist())
-            avr_area += fix.get_area_dist()
-            max_fix_speed = max(max_fix_speed, fix.get_max_speed())
-            avr_fix_speed += fix.get_max_speed()
-        avr_dist /= fix_count
-        avr_area /= fix_count
-        avr_fix_speed /= fix_count
-        print('Max area: ' + max_area.__str__())
-        print('Avr area: ' + avr_area.__str__())
-        print('Max dist: ' + max_dist.__str__())
-        print('Avr dist: ' + avr_dist.__str__())
-        print('Max speed: ' + max_fix_speed.__str__())
-        print('Avr speed: ' + avr_fix_speed.__str__())
-
+    @staticmethod
+    def get_df_null_row():
+        return DataFrame({'File' : [],
+                          'x_mean' : [],
+                          'x_std' : [],
+                          'x_min' : [],
+                          'x_max' : [],
+                          'x_25' : [],
+                          'x_50' : [],
+                          'x_75' : [],
+                          'y_mean' : [],
+                          'y_std' : [],
+                          'y_min' : [],
+                          'y_max' : [],
+                          'y_25' : [],
+                          'y_50' : [],
+                          'y_75' : [],
+                          'False Fixation, per minute': [],
+                          'False Saccades, per minute': [],
+                          'Saccades with amplitude > 6 degrees, per minute': [],
+                          'Saccades with amplitude < 6 degrees, per minute': [],
+                          'Max Curve': [],
+                          'Average Curve': [],
+                          'Min Curve': [], 
+                          'Time Frame': [],
+                          'Saccades time': [],
+                          'Fixation time < 150 ms': [],
+                          'Fixation time > 150 ms': [],
+                          'Fixation time between 150 and 900 ms': [],
+                          'Fixation time > 900 ms': [],
+                          'Fixation time < 180 ms': [],
+                          'Fixation time > 180 ms': [],
+                          '% of Fixations < 150 ms': [],
+                          '% of Fixations > 150 ms': [],
+                          '% of Fixations between 150 and 900 ms': [],
+                          '% of Fixations > 900 ms': [],
+                          '% of Fixations < 180 ms': [],
+                          '% of Fixations > 180 ms': [],
+                          'Fixation time < 150 ms, per time': [],
+                          'Fixation time > 150 ms, per time': [],
+                          'Fixation time between 150 and 900 ms, per time': [],
+                          'Fixation time > 900 ms, per time': [],
+                          'Fixation time < 180 ms, per time': [],
+                          'Fixation time > 180 ms, per time': [],
+                          '% of Fixations < 150 ms, per minute': [],
+                          '% of Fixations > 150 ms, per minute': [],
+                          '% of Fixations between 150 and 900 ms, per minute': [],
+                          '% of Fixations > 900 ms, per minute': [],
+                          '% of Fixations < 180 ms, per minute': [],
+                          '% of Fixations > 180 ms, per minute': [],
+                          'Fixation Frequency': [],
+                          'Average Fix Frequency in interval (1s)': [],
+                          'Max Fix Frequency in interval (1s)': [],
+                          'Average Acceleration': [],
+                          'Min Acceleration': [],
+                          'Max Acceleration': [],
+                          'Average Speed': [],
+                          'Min Speed': [],
+                          'Max Speed': [],
+                          'Average Acceleration in interval (1s)': [],
+                          'Min Acceleration in interval (1s)': [],
+                          'Max Acceleration in interval (1s)': [],
+                          'Average Speed in interval (1s)': [],
+                          'Min Speed in interval (1s)': [],
+                          'Max Speed in interval (1s)': [],
+                          'Average Fixation Speed': [],
+                          'Min Fixation Speed': [],
+                          'Max Fixation Speed': [],
+                          'Average Fixation Speed, < 150ms': [],
+                          'Min Fixation Speed, < 150ms': [],
+                          'Max Fixation Speed, < 150ms': [],
+                          'Average Fixation Speed, > 150ms': [],
+                          'Min Fixation Speed, > 150ms': [],
+                          'Max Fixation Speed, > 150ms': [],
+                          'Average Saccade Speed': [],
+                          'Min Saccade Speed': [],
+                          'Max Saccade Speed': [],
+                          'Average Saccade Length': [],
+                          'Min Saccade Length': [],
+                          'Max Saccade Length': [],
+                          'Average Saccade Time': [],
+                          'Min Saccade Time': [],
+                          'Max Saccade Time': []})
 
 
 
@@ -868,3 +864,73 @@ def key_index(data_frame, key_name):
         i += 1
     print("key wasn't found: " + key_name)
     return -1
+
+
+
+
+'''
+            
+        all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
+        row = [ file_name, self.get_method(),
+                (self.false_fix / self.time_frame * 60).__str__(),
+                (self.pong / self.time_frame * 60).__str__(),
+                (self.secondary.long_sacc / self.time_frame * 60).__str__(),
+                (self.secondary.short_sacc / self.time_frame * 60).__str__(),
+                self.secondary.max_curve.__str__(),
+                (self.secondary.avr_curve / (len(self.fixations) + len(self.saccades))).__str__(),
+                self.secondary.min_curve.__str__(),
+                self.time_frame.__str__(),
+                self.secondary.sacc_time.__str__(),
+                self.secondary.short_fix_time.__str__(),
+                (self.secondary.med_fix_time + self.secondary.long_fix_time).__str__(),
+                self.secondary.med_fix_time.__str__(),
+                self.secondary.long_fix_time.__str__(),
+                self.secondary.fix_l_180_time.__str__(),
+                self.secondary.fix_g_180_time.__str__(),
+                (self.secondary.short_fix_count / all_fix * 100).__str__(),
+                ((1 - self.secondary.short_fix_count / all_fix) * 100).__str__(),
+                (self.secondary.med_fix_count / all_fix * 100).__str__(),
+                (self.secondary.long_fix_count / all_fix * 100).__str__(),
+                (self.secondary.fix_l_180 / all_fix * 100).__str__(),
+                (self.secondary.fix_g_180 / all_fix * 100).__str__(),
+                (self.secondary.short_fix_time / self.time_frame).__str__(),
+                ((self.secondary.med_fix_time + self.secondary.long_fix_time) / self.time_frame).__str__(),
+                (self.secondary.med_fix_time / self.time_frame).__str__(),
+                (self.secondary.long_fix_time / self.time_frame).__str__(),
+                (self.secondary.fix_l_180_time / self.time_frame).__str__(),
+                (self.secondary.fix_g_180_time / self.time_frame).__str__(),
+                (self.secondary.short_fix_count / self.time_frame * 60).__str__(),
+                ((self.secondary.med_fix_count + self.secondary.long_fix_count) / self.time_frame * 60).__str__(),
+                (self.secondary.med_fix_count / self.time_frame * 60).__str__(),
+                (self.secondary.long_fix_count / self.time_frame * 60).__str__(),
+                (self.secondary.fix_l_180 / self.time_frame * 60).__str__(),
+                (self.secondary.fix_g_180 / self.time_frame * 60).__str__(),
+                (len(self.fixations) / self.time_frame).__str__(),
+                self.secondary.avr_freq.__str__(),
+                self.secondary.max_freq.__str__(),
+                self.secondary.avr_acc.__str__(),
+                self.secondary.min_acc.__str__(),
+                self.secondary.max_acc.__str__(),
+                self.avrSpeed.__str__(),
+                self.minSpeed.__str__(),
+                self.maxSpeed.__str__(),
+                self.secondary.avr_i_acc.__str__(),
+                self.secondary.min_i_acc.__str__(),
+                self.secondary.max_i_acc.__str__(),
+                self.secondary.avr_i_speed.__str__(),
+                self.secondary.min_i_speed.__str__(),
+                self.secondary.max_i_speed.__str__(),
+                (self.secondary.fix_distance / self.secondary.fix_time).__str__(),
+                self.secondary.min_f_speed.__str__(),
+                self.secondary.max_f_speed.__str__(),
+                (self.secondary.sacc_distance / self.secondary.sacc_time).__str__(),
+                self.secondary.min_s_speed.__str__(),
+                self.secondary.max_s_speed.__str__(),
+                (self.secondary.sacc_distance / len(self.saccades)).__str__(),
+                self.secondary.min_s_length.__str__(),
+                self.secondary.max_s_length.__str__(),
+                (self.secondary.sacc_time / len(self.saccades)).__str__(),
+                self.secondary.min_s_time.__str__(),
+                self.secondary.max_s_time.__str__(),
+                'none', 'none', 'none']
+'''

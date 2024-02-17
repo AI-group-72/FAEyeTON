@@ -9,8 +9,8 @@
 # 3 : максимально отладить считывание, приваять UI для лйгкой настройки
 
 
-from Input.InputSection import InputSection
-from Input.InputStream import InputStream
+from .InputSection import InputSection
+from .InputStream import InputStream
 from DeviceManager import DeviceHandler
 
 
@@ -25,7 +25,6 @@ def read_csv_file(path):
     data = InputSection()
     data.add_data_array(device.request_data())
     return data
-
 
 def init_reading_stream():
     # запуск потока ввода

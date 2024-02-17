@@ -1,10 +1,10 @@
+from time import sleep
 import sys
-
 from PyQt5.QtGui import QPainter, QColor
 
 from Input import read_csv_file
 from Analise.ParsedData import ParsedData
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QLabel, QFileDialog, QLineEdit, QRadioButton, \
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QApplication, QLabel, QFileDialog, QLineEdit, QRadioButton, \
     QButtonGroup
 
 class Example(QMainWindow):
@@ -138,7 +138,7 @@ class Example(QMainWindow):
         self.statusBar()
 
         self.setGeometry(300, 300, 600, 200)
-        self.setWindowTitle('Metric gathering')
+        self.setWindowTitle('Вычисление количественных характеристик')
         self.show()
 
     def paintEvent(self, event):
@@ -275,8 +275,8 @@ class Example(QMainWindow):
             metrics = ParsedData()
             metrics.parse(section, self.I, arg)
             metrics.calc_metrics()
-            metrics.to_xls(file.split('/')[-1], self.file_line.text())
-            metrics.print_some()
+            metrics.to_csv(file.split('/')[-1], self.file_line.text())
+    #        metrics.print_some()
     #        metrics.to_csv('../out_data1 — копия.xlsx')
 
     def findSec(self):
@@ -305,7 +305,8 @@ class Example(QMainWindow):
                 metrics = ParsedData()
                 metrics.parse(section, self.I, arg)
                 metrics.calc_metrics()
-                metrics.to_xls_by_row(file.split('/')[-1], self.file_line.text())
+#                metrics.to_xls_by_row(file.split('/')[-1], self.file_line.text())
+                metrics.to_csv(file.split('/')[-1], 'Summary.csv')
 #                lines.append(metrics.get_line())
                 current += 1
                 print( (float(current) / float(total) * 100.0).__str__() + " % of progress")
@@ -332,8 +333,8 @@ class Example(QMainWindow):
     def buttonBClicked(self):
         self.statusBar().showMessage('B was pressed' + self.line.text())
 
-
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    sleep(10)
     ex = Example()
     sys.exit(app.exec_())

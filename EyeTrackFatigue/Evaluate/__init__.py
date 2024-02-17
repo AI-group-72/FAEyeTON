@@ -1,15 +1,10 @@
 # модуль с финальной оценкой данных, получаемых после работы модуля analise
-# в основном работа ИИ
+# в основном работа нейросетей
 
 from Evaluate.BasicEval import BasicEval
 from Evaluate.RandomForestEval import RandomForestEval
-from Evaluate.ANNEval import ANNEval
 
 # стадия 1 Basic
 
-# стадия 2 RandomForest, ANN
+# стадия 2 RandomForest, MLP
 
-# плюс реестр обучающих выборок, но это ещё обсудить надо
-
-# стадия 3
-# тут будем доделывать по заявке

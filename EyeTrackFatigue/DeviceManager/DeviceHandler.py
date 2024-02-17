@@ -16,14 +16,17 @@ class DeviceHandler:
     def request_data(self):
         i = 0
         i_time = i_x = i_y = 0
+        i_h = -1
         first_line = self.reader.__next__()
         for key in first_line:
             if key.__contains__('time'):
                 i_time = i
-            if key.__contains__('pos_x'):
+            if key.__contains__('head_pos_x'):
                 i_x = i
-            if key.__contains__('pos_y'):
+            if key.__contains__('head_pos_y'):
                 i_y = i
+            #if key.__contains__('time'):
+             #   i_h = i    
             i += 1
 
         print('Time column: ' + i_time.__str__() + ' X column: ' + i_x.__str__() + ' Y column: ' + i_y.__str__())

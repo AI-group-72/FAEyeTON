@@ -1,18 +1,16 @@
 import math
 
-
+# Фрагмент данных
 class SingleData:
     def __init__(self):
         self.x = 0
         self.y = 0
         self.time = 0
-        # метрики поворота головы
 
     def __init__(self, raw_data, fov):
         self.time = float(raw_data[0])
         self.x = float(raw_data[1]) * fov
         self.y = float(raw_data[2]) * fov
-        # метрики поворота головы
 
     def __str__(self):
         return self.time.__str__() + ': ' + self.x.__str__() + ' ; ' + self.y.__str__()

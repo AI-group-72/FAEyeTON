@@ -1,6 +1,6 @@
-import datetime
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+import datetime
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import (
     confusion_matrix,
     accuracy_score,
@@ -11,14 +11,14 @@ from sklearn.metrics import (
 
 from Evaluate.Evaluator import Evaluator
 
-class RandomForestEval(Evaluator):
+class DecisionTreeEval(Evaluator):
     def __init__(self):
         self.model = None
         self.acc = -1
         self.f1 = -1
-    
+
     def get_name(self):
-        return 'RFC'
+        return 'DTC'
     
     def evaluate(self, data):
         if self.model == None:
@@ -32,35 +32,42 @@ class RandomForestEval(Evaluator):
         self.acc = accuracy_score(test_Y, y_pred)
         self.f1 = f1_score(test_Y, y_pred)   
 
-    def edu(self, train_X, train_Y, test_X, test_Y):
+    def edu(self, train_X, train_Y, test_X, test_Y, strange=False):
         err = 0
         rand = -1
         c = ['gini', 'entropy', 'log_loss']
-        n = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-        print('Start', datetime.datetime.now())
+        
+        now1 = datetime.datetime.now()
+        print(now1)
         for i in range(100):
-            print(i)
-            for N in n:
-                for C in c:
-                    model = RandomForestClassifier(n_estimators = N , criterion = C, random_state = i)
-                    model.fit(train_X, train_Y)
-                    y_pred = model.predict(test_X)
-                    f = f1_score(test_Y, y_pred)
-                    if f > err:
-                        print(f)
-                        rand = i
-                        err = f
-                        n_e = N
-                        cr = C
-        print('End', datetime.datetime.now())
+            for C in c:
+                model = DecisionTreeClassifier(criterion = C, random_state = i)
+                model.fit(train_X, train_Y)
+                y_pred = model.predict(test_X)
+                m = f1_score(test_Y, y_pred)
+                if m > err:
+                    rand = i
+                    err = m
+                    cr = C
+        
+        now1 = datetime.datetime.now()
+        print(now1)
         print(rand)
-        print(n_e)
         print (cr)
-        self.model = RandomForestClassifier(n_estimators = n_e , criterion = cr, random_state = rand)
+        self.model = DecisionTreeClassifier(criterion = cr, random_state = rand)
         self.model.fit(train_X, train_Y)
         y_pred = model.predict(test_X)
-        f = f1_score(test_Y, y_pred)
-        print(f)
+        m = f1_score(test_Y, y_pred)
+        self.acc = accuracy_score(test_Y, y_pred)
+        self.f1 = f1_score(test_Y, y_pred)        
+        print(m)
+
+    def redu(self, train_X, train_Y, test_X, test_Y):
+        self.model.fit(train_X, train_Y)
+        y_pred = self.model.predict(test_X)
+        self.acc = accuracy_score(test_Y, y_pred)
+        self.f1 = f1_score(test_Y, y_pred)        
+
 
     def cross_edu(self, data_X, data_Y):
         teX = []
@@ -83,44 +90,43 @@ class RandomForestEval(Evaluator):
             print(sum(trY[cross]))
             print(len(teX[cross]))
             print(sum(teY[cross]))
-
+        err = 0
         rand = -1
         c = ['gini', 'entropy', 'log_loss']
-        n = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-        err = 0
+        
+        now1 = datetime.datetime.now()
+        print(now1)
         for i in range(5):
             print(i)
-            for N in n:
-                for C in c:
-                    model = RandomForestClassifier(n_estimators = N , criterion = C, random_state = i)
-                    f = 0
-                    acc = 0
-                    cur_f = 0
-                    for cross in range(5):
-                        test_X = teX[cross]
-                        test_Y = teY[cross]
-                        train_X = trX[cross]
-                        train_Y = trY[cross]
-                        model.fit(train_X, train_Y)
-                        y_pred = model.predict(test_X)
-                        _f = f1_score(test_Y, y_pred)
-                        if _f < 0.60 or _f < (cur_f-0.15):
-                            break
-                        f += _f
-                        acc += accuracy_score(test_Y, y_pred)
-                    f = f / 5
-                    acc = acc / 5
-                    if f > err:
-                        print(f)
-                        rand = i
-                        err = f
-                        n_e = N
-                        cr = C
-                        cross_acc = acc
+            for C in c:
+                model = DecisionTreeClassifier(criterion = C, random_state = i)
+                f = 0
+                acc = 0
+                cur_f = 0
+                for cross in range(5):
+                    test_X = teX[cross]
+                    test_Y = teY[cross]
+                    train_X = trX[cross]
+                    train_Y = trY[cross]
+                    model.fit(train_X, train_Y)
+                    y_pred = model.predict(test_X)
+                    _f = f1_score(test_Y, y_pred)
+                    #if _f < 0.60 or _f < (cur_f-0.15):
+                     #   break
+                    if _f > cur_f:
+                        cr = cross
+                    f += _f
+                    acc += accuracy_score(test_Y, y_pred)
+                f = f / 5
+                acc = acc / 5
+                if f > err:
+                    rand = i
+                    err = f
+                    crit = C
+                    cross_acc = acc
         print(rand)
-        print(cr)
-        print(n_e)
-
+        print(crit)
+        
         now = datetime.datetime.now()
         print(now)
         print('Total time:', now - now1)
@@ -128,7 +134,7 @@ class RandomForestEval(Evaluator):
         test_Y = teY[cross]
         train_X = trX[cross]
         train_Y = trY[cross]
-        self.model = RandomForestClassifier(n_estimators = n_e, criterion = cr, random_state = rand)
+        self.model = DecisionTreeClassifier(criterion = crit, random_state = i)
         self.model.fit(train_X, train_Y)
         y_pred = self.model.predict(test_X)
         self.acc = accuracy_score(test_Y, y_pred)
@@ -137,12 +143,12 @@ class RandomForestEval(Evaluator):
         self.cross_acc = cross_acc
 
     def edu_args(self, train_X, train_Y, test_X, test_Y, rand, n_e, cr):
-        self.model = RandomForestClassifier(n_estimators = n_e , criterion = cr, random_state = rand)
+        self.model = DecisionTreeClassifier(n_estimators = n_e , criterion = cr, random_state = rand)
         self.model.fit(train_X, train_Y)
         y_pred = self.model.predict(test_X)
-        f = f1_score(test_Y, y_pred)
-        print(f)
-        
+        m = accuracy_score(test_Y, y_pred)
+        print(m)
+     
 # 18
 # 30
 # gini
