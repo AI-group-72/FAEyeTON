@@ -51,7 +51,7 @@ class InputSection:
         i = 0
         while i < self.dotCount-1:
             for j in range(frames+1):
-                self.positionData.insert(i+j+1, SingleData(self.positionData[i], self.positionData[i+j+1], j+1, frames+1)) # аппрокисируем позицию следующего кадра
+                self.positionData.insert(i+j+1, SingleData.approx(self.positionData[i], self.positionData[i+j+1], j+1, frames+1)) # аппрокисируем позицию следующего кадра
                 self.distanceData.insert(i, self.positionData[i+j+1].get_distance(self.positionData[i+j])) # вставляем перерассчитанную дистанцию
                 self.velocityData.insert(i, self.distanceData[i+j] / (self.positionData[i+j+1].time - self.positionData[i+j].time)) # вставляем перерассчитанную скорость
                 self.dotCount += 1
