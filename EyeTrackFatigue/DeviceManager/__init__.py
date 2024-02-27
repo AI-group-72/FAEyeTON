@@ -1,5 +1,4 @@
-from DeviceManager.DeviceHandler import DeviceHandler
-
-# dv = DeviceHandler('../test_data.csv')
-# data = dv.request_data()
-# print(data)
+'''
+Модуль работы с "сырыми" данными - данными получаемыми от окулографа.
+Основной класс DeviceHandler - используется для настройке вводимых данных.
+'''
