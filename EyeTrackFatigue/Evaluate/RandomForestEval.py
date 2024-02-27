@@ -6,8 +6,8 @@ from sklearn.metrics import (
     f1_score
 )
 
-from Evaluate.Evaluator import Evaluator
-
+from ..Evaluate.Evaluator import Evaluator
+# модель оценки "случайный лес"
 class RandomForestEval(Evaluator):
     def __init__(self):
         self.model = None
@@ -23,44 +23,47 @@ class RandomForestEval(Evaluator):
         else:
             return self.model.predict(data)
 
-    def redu(self, train_X, train_Y, test_X, test_Y):
+    def redu(self, train_X, train_Y, test_X, test_Y): # переобучение на новых данных со старыми параметрами
         self.model.fit(train_X, train_Y)
         y_pred = self.model.predict(test_X)
         self.acc = accuracy_score(test_Y, y_pred)
         self.f1 = f1_score(test_Y, y_pred)   
 
-    def edu(self, train_X, train_Y, test_X, test_Y):
+    def edu(self, train_X, train_Y, test_X, test_Y): # обучение на новых данных
         err = 0
         rand = -1
-        c = ['gini', 'entropy', 'log_loss']
-        n = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-        print('Start', datetime.datetime.now())
-        for i in range(100):
+        c = ['gini', 'entropy', 'log_loss']  # набор используемых критериев
+        n = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]  # набор количества "деревьев" в "лесу"
+        now = datetime.datetime.now() 
+        print(now) # замер времени
+        for i in range(5): # перебор случайных состояний
             print(i)
-            for N in n:
-                for C in c:
+            for N in n: # перебор вариантов количества
+                for C in c: # перебор критериев
                     model = RandomForestClassifier(n_estimators = N , criterion = C, random_state = i)
                     model.fit(train_X, train_Y)
                     y_pred = model.predict(test_X)
                     f = f1_score(test_Y, y_pred)
-                    if f > err:
+                    if f > err: # выбор лучших параметров (по показателю Ф-меры)
                         print(f)
                         rand = i
                         err = f
                         n_e = N
                         cr = C
-        print('End', datetime.datetime.now())
+        now = datetime.datetime.now() - now
+        print(now) # вывод времени
         print(rand)
         print(n_e)
         print (cr)
+        # переобучение по лучшим выявленным параметрам
         self.model = RandomForestClassifier(n_estimators = n_e , criterion = cr, random_state = rand)
         self.model.fit(train_X, train_Y)
         y_pred = model.predict(test_X)
         f = f1_score(test_Y, y_pred)
         print(f)
 
-    def cross_edu(self, data_X, data_Y):
-        teX = []
+    def cross_edu(self, data_X, data_Y): # обучение на новых данных с использованием кроссвалидации
+        teX = [] 
         teY = []
         trX = []
         trY = []
@@ -85,7 +88,7 @@ class RandomForestEval(Evaluator):
         c = ['gini', 'entropy', 'log_loss']
         n = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
         err = 0
-        for i in range(100):  # перебор случайных состояний / iterating through random states
+        for i in range(1):  # перебор случайных состояний / iterating through random states
             print(i)
             for N in n:  # Перебор параметров / Iterating through the parameters
                 for C in c:  # Перебор параметров / Iterating through the parameters
@@ -143,6 +146,3 @@ class RandomForestEval(Evaluator):
         f = f1_score(test_Y, y_pred)
         print(f)
         
-# 18
-# 30
-# gini
