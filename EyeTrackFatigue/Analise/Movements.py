@@ -1,17 +1,17 @@
 import math
 
-class EyeMovement:
-    FOV = 82 * math.sqrt(2)
+class EyeMovement: # класс, отображающий стратегию глазных движений на коротком временном отрезке
+    FOV = 82 * math.sqrt(2) # угол обзора камеры сцены, используемый для рассчётов
 
     def __init__(self, movement_type):
-        self.movementType = movement_type
+        self.movementType = movement_type # тип глазодвигательной стратегии - фиксация или саккада
         self.points = []
         self.distances = []
         self.time = 0
         self.velocities = []
         self.accelerations = []
 
-    def add_point(self, point):
+    def add_point(self, point): # добавление точки из отдельного кадра
         self.points.append(point)
         if len(self.points) < 2:
             return
@@ -22,8 +22,8 @@ class EyeMovement:
             return
         self.accelerations.append(
             abs(self.velocities[-1] - self.velocities[-2]) / (self.points[-1].time - self.points[-2].time))
-
-    def get_avr_speed(self):
+    # методы для рассчёта скоростей 
+    def get_avr_speed(self):  
         return sum(self.distances) / self.time
 
     def get_med_speed(self):
@@ -34,7 +34,7 @@ class EyeMovement:
 
     def get_max_speed(self):
         return max(self.velocities)
-
+    # методы для рассчёта ускорений
     def get_avr_acceleration(self):
         acc = 0
         for i in range(2, len(self.points)):
@@ -45,13 +45,13 @@ class EyeMovement:
         if len(self.accelerations) > 0:
             return min(self.accelerations)
         else:
-            return 1000000
+            return 1000000 # спец. значение
 
     def get_max_acceleration(self):
         if len(self.accelerations) > 0:
             return max(self.accelerations)
         else:
-            return 0
+            return 0 # спец. значение
 
     def get_abs_distance(self):
         if len(self.points) < 2:
@@ -62,7 +62,7 @@ class EyeMovement:
     def get_distance(self):
         return sum(self.distances)
 
-    def in_center(self, center_radius):
+    def in_center(self, center_radius): # определение нахождения стратегии в цетральной области (с указываемым радиусом)
         x = y = 0
         for p in self.points:
             x += p.x
@@ -71,13 +71,13 @@ class EyeMovement:
         y /= len(self.points)
         return math.sqrt(pow((self.FOV / 2) - x, 2) + pow((self.FOV / 2) - y, 2)) < center_radius
 
-    def get_curve(self):
+    def get_curve(self): # определение кривизны
         if self.get_abs_distance() == 0:
             print('error')
             return 1
         return sum(self.distances) / self.get_abs_distance()
 
-    def get_max_dist(self):
+    def get_max_dist(self): 
         max_x = min_x = self.points[0].x
         max_y = min_y = self.points[0].y
         for point in self.points:
@@ -93,16 +93,19 @@ class EyeMovement:
         return pow(pow(end.x - start.x, 2) + pow(end.y - start.y, 2), 0.5)
 
 
-class HeadMovement(EyeMovement):
-    def __init__(self, movement_type):
-        super.__init__(movement_type)
+class HeadMovement(EyeMovement): # класс, отображающий стратегию движений головы на коротком временном отрезке
+    # наследует класс EyeMovement, т.к. используемая классификация движений головы основывается на движениях взгляда
+    # выделяются фиксации (периоды относительно пренебрежимого движения в рамках одной области)
+    # и саккады (отрезки резкого движения на значительное расстояние)
+    # помимо этого к движениям головы добавляется определение угла наклона головы
+    def __init__(self, movement_type): 
+        super.__init__(movement_type) 
         self.angles = []
         self.angle_distances = []
         self.angle_velocities = []
         self.angle_accelerations = []
 
-    def add_point_angle(self, angle):
-        
+    def add_point_angle(self, angle): # добавление угла наклона головы в отдельном кадре записи
         self.angles.append(angle)
         if len(self.angles) < 2:
             return
@@ -112,7 +115,7 @@ class HeadMovement(EyeMovement):
             return
         self.accelerations.append(
             abs(self.angle_velocities[-1] - self.angle_velocities[-2]) / (self.points[-1].time - self.points[-2].time))
-
+    # методы рассчёта угловых скоростей
     def get_avr_angle_speed(self):
         return sum(self.angle_distances) / self.time
 
@@ -124,7 +127,7 @@ class HeadMovement(EyeMovement):
 
     def get_max_angle_speed(self):
         return max(self.angle_velocities)
-
+    # методы рассчёта угловых ускорений
     def get_avr_angle_acceleration(self):
         acc = 0
         for i in range(2, len(self.angles)):
@@ -135,13 +138,13 @@ class HeadMovement(EyeMovement):
         if len(self.angle_accelerations) > 0:
             return min(self.angle_accelerations)
         else:
-            return 1000000
+            return 1000000 # спец. значение
 
     def get_max_angle_acceleration(self):
         if len(self.angle_accelerations) > 0:
             return max(self.angle_accelerations)
         else:
-            return 0
+            return 0 # спец. значение
 
     def get_abs_angle_distance(self):
         if len(self.points) < 2:
