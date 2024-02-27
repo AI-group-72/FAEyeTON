@@ -33,8 +33,8 @@ class DecisionTreeEval(Evaluator):
         rand = -1
         c = ['gini', 'entropy', 'log_loss'] # набор используемых критериев
         
-        now1 = datetime.datetime.now() #
-        print(now1)
+        now = datetime.datetime.now() 
+        print(now) # замер времени
         for i in range(5): # перебор случайных состояний
             for C in c: # перебор критериев
                 model = DecisionTreeClassifier(criterion = C, random_state = i)
@@ -46,8 +46,8 @@ class DecisionTreeEval(Evaluator):
                     err = m
                     cr = C
         
-        now1 = datetime.datetime.now() - now1
-        print(now1) # замер времени
+        now = datetime.datetime.now() - now
+        print(now) # вывод времени
         print(rand)
         print (cr)
         # переобучение по лучшим выявленным параметрам
