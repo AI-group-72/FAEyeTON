@@ -2,15 +2,11 @@ import pandas as pd
 import datetime
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import (
-    confusion_matrix,
     accuracy_score,
-    precision_score,
-    recall_score,
     f1_score
 )
-
-from Evaluate.Evaluator import Evaluator
-
+from ..Evaluate.Evaluator import Evaluator
+# модель оценки "дерево решений"
 class DecisionTreeEval(Evaluator):
     def __init__(self):
         self.model = None
@@ -18,7 +14,7 @@ class DecisionTreeEval(Evaluator):
         self.f1 = -1
 
     def get_name(self):
-        return 'DTC'
+        return 'DTC'    
     
     def evaluate(self, data):
         if self.model == None:
@@ -26,34 +22,35 @@ class DecisionTreeEval(Evaluator):
         else:
             return self.model.predict(data)
 
-    def redu(self, train_X, train_Y, test_X, test_Y):
+    def redu(self, train_X, train_Y, test_X, test_Y): # переобучение на новых данных со старыми параметрами
         self.model.fit(train_X, train_Y)
         y_pred = self.model.predict(test_X)
         self.acc = accuracy_score(test_Y, y_pred)
         self.f1 = f1_score(test_Y, y_pred)   
 
-    def edu(self, train_X, train_Y, test_X, test_Y, strange=False):
+    def edu(self, train_X, train_Y, test_X, test_Y): # обучение на новых данных 
         err = 0
         rand = -1
-        c = ['gini', 'entropy', 'log_loss']
+        c = ['gini', 'entropy', 'log_loss'] # набор используемых критериев
         
-        now1 = datetime.datetime.now()
+        now1 = datetime.datetime.now() #
         print(now1)
-        for i in range(100):
-            for C in c:
+        for i in range(5): # перебор случайных состояний
+            for C in c: # перебор критериев
                 model = DecisionTreeClassifier(criterion = C, random_state = i)
                 model.fit(train_X, train_Y)
                 y_pred = model.predict(test_X)
                 m = f1_score(test_Y, y_pred)
-                if m > err:
+                if m > err: # выбор лучших параметров (по показателю Ф-меры)
                     rand = i
                     err = m
                     cr = C
         
-        now1 = datetime.datetime.now()
-        print(now1)
+        now1 = datetime.datetime.now() - now1
+        print(now1) # замер времени
         print(rand)
         print (cr)
+        # переобучение по лучшим выявленным параметрам
         self.model = DecisionTreeClassifier(criterion = cr, random_state = rand)
         self.model.fit(train_X, train_Y)
         y_pred = model.predict(test_X)
@@ -62,19 +59,13 @@ class DecisionTreeEval(Evaluator):
         self.f1 = f1_score(test_Y, y_pred)        
         print(m)
 
-    def redu(self, train_X, train_Y, test_X, test_Y):
-        self.model.fit(train_X, train_Y)
-        y_pred = self.model.predict(test_X)
-        self.acc = accuracy_score(test_Y, y_pred)
-        self.f1 = f1_score(test_Y, y_pred)        
-
-
-    def cross_edu(self, data_X, data_Y):
+    def cross_edu(self, data_X, data_Y): # обучение на новых данных с использованием кроссвалидации
         teX = []
         teY = []
         trX = []
         trY = []
-        step = len(data_X) // 5
+        # разделение данных -  5 для пяти-фолдной кроссвалидации
+        step = len(data_X) // 5 
         now1 = datetime.datetime.now()
         print(now1)
         for cross in range(5):                                    
@@ -141,7 +132,7 @@ class DecisionTreeEval(Evaluator):
         self.model.fit(train_X, train_Y)
         y_pred = self.model.predict(test_X)
         self.f1 = f1_score(test_Y, y_pred) # результаты по одному из разбиений / results for one sample
-        self.acc = accuracy_score(test_Y, y_pred)  
+        self.acc = accuracy_score(test_Y, y_pred)
         self.cross_f1 = err # усреднённые результаты по всем разбиениям / averaged results for all samples
         self.cross_acc = cross_acc
 
@@ -151,7 +142,3 @@ class DecisionTreeEval(Evaluator):
         y_pred = self.model.predict(test_X)
         m = accuracy_score(test_Y, y_pred)
         print(m)
-     
-# 18
-# 30
-# gini
