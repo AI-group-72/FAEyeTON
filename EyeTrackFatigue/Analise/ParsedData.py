@@ -3,10 +3,11 @@ from pandas import read_excel, concat, DataFrame
 from openpyxl import load_workbook
 import csv
 import numpy as np
-from Analise.EyeMovements import Movement
-from Analise.GeoMetrics import GeoMetrics
-from Analise.SecondaryMetrics import SecondaryMetrics
+from ..Analise.Movements import EyeMovement
+from ..Analise.GeoMetrics import GeoMetrics
+from ..Analise.SecondaryMetrics import SecondaryMetrics
 
+# основной класс, объединяет методы вычисления, обработки и хранение данных о количественных характеристиках
 class ParsedData:
     def __init__(self):
         self.dots = 0
@@ -25,7 +26,7 @@ class ParsedData:
         self.args = 200
         self.center_radius = 200
 
-    def compare(self, other):
+    def compare(self, other): # метод сравнения двух отрезков обработанных данных 
         l = min(len(self.flag), len(other.flag))
         fp = 0
         fn = 0
@@ -40,9 +41,9 @@ class ParsedData:
                     fn += 1.0
         return 2 * tp / (2 * tp + fp + fn)
 
-    # вынимаем метрики из отрезка данных
-    def parse(self, input_section, method=0, args=200, center_radius=2.5):
+    def parse(self, input_section, method=0, args=200, center_radius=2.5): # разметка входных данных (выделение саккад и фиксаций) указанным методом
         print('parse...')
+        # предварительная инициализация, выделение базовых характеристик
         self.raw_data = input_section
         self.center_radius = center_radius
         self.dots = len(input_section.positionData)
@@ -55,7 +56,8 @@ class ParsedData:
         self.args = args
         print('marking fixations...')
         self.flag = []
-        if self.method != 2 and self.method != 1:
+        # методы разметки данных
+        if self.method != 2 and self.method != 1: 
             self.method = 0
         if self.method == 2:
             self.get_fixation_by_abs_dist(args)
@@ -64,14 +66,15 @@ class ParsedData:
         if self.method == 0:
             self.get_fixation_by_speed_threshold(args)
         print('cleaning...')
-        self.clean_fix()
+        self.clean_fix() # отчистка данных
         print('Pong = ' + self.pong.__str__() + ' False Fix = ' + self.false_fix.__str__())
         print('composing...')
-        self.compose()
+        self.compose() # сбор размеченных данных в набор стратегий движения
 
-    def parse_pupil(self, input_section, file):
+    def parse_pupil(self, input_section, file): # разметка на основе внешних данных
         print('parse by pupil...')
         self.raw_data = input_section
+        # предварительная инициализация, выделение базовых характеристик
         self.center_radius = 0
         self.dots = len(input_section.positionData)
         self.time_frame = input_section.time_frame()
@@ -84,12 +87,12 @@ class ParsedData:
         self.flag = []
         self.get_fixation_by_pupil(file)
         print('cleaning...')
-        self.clean_fix()
+        self.clean_fix() # отчистка данных
         print('Pong = ' + self.pong.__str__() + ' False Fix = ' + self.false_fix.__str__())
         print('composing...')
-        self.compose()
+        self.compose() # сбор размеченных данных в набор стратегий движения
 
-    def get_method(self):
+    def get_method(self): # запрос выбранного метода разметки
         if self.method == 4:
             return 'by pupil_labs file '
         if self.method == 2:
@@ -118,7 +121,6 @@ class ParsedData:
                 self.flag.append('s')
             else:
                 self.flag.append('f')
-    
     
     # Алгоритм 2. Определение стратегий по расстоянию между точками и центром фиксации, т.е. её радиусу.
     # (Camilli, Terenzi, & Nocera, 2008)
@@ -161,6 +163,7 @@ class ParsedData:
             else:
                 self.flag.append('f')
 
+    # разметка по внешним данным (например используя файл полученный от обработки данных алгоритмами PupilLabs)
     def get_fixation_by_pupil(self, file):
         fix = []
         with open(file, newline='') as f:
@@ -184,9 +187,7 @@ class ParsedData:
             fix_i += 1
         print(fix_i.__str__() + '  ' + self.raw_data.positionData[0].time.__str__() + '  '
               + fix[fix_i][0].__str__(), fix[fix_i][1].__str__())
-
         # print(fix)
-
         i = 0
         while i < self.dots:
             if fix_i >= len(fix):
@@ -201,7 +202,7 @@ class ParsedData:
                 continue
             i += 1
 
-    def clean_fix(self):
+    def clean_fix(self): # выделение "ложных" (сверхкоротких) фиксаций и саккад
         for i in range(1, len(self.flag) - 2):
             if self.flag[i] == 's' and self.flag[i - 1] == 'f' and self.flag[i + 1] == 'f':
                 self.pong += 1
@@ -210,8 +211,8 @@ class ParsedData:
             if self.flag[i] == 'f' and self.flag[i - 1] == 's' and self.flag[i + 1] == 's':
                 self.false_fix += 1
                 self.flag[i] = 's'
-
-    def compose(self):
+    
+    def compose(self):  # сбор размеченных данных в набор стратегий движения
         fl = self.flag[0]
         self.new_movement(fl, self.raw_data.positionData[0])
         for i in range(1, len(self.flag) - 1):
@@ -228,20 +229,20 @@ class ParsedData:
                 else:
                     self.new_movement(fl, self.raw_data.positionData[i])
 
-
-    def new_movement(self, fl, point):
+    def new_movement(self, fl, point): # добавление новой стратегии движения
         if fl == 's':
-            self.saccades.append(Movement('s'))
+            self.saccades.append(EyeMovement('s'))
             self.saccades[-1].add_point(point)
         else:
-            self.fixations.append(Movement('f'))
+            self.fixations.append(EyeMovement('f'))
             self.fixations[-1].add_point(point)
 
-    def calc_metrics(self):
-        self.secondary = SecondaryMetrics()
+    def calc_metrics(self): # рассчёт характеристик
+        # предварительная инициализация
+        self.secondary = SecondaryMetrics() 
         self.geo = GeoMetrics()
 
-        # -----------------#
+        # рассчёт геометрических метрик позиции по оси Х
         x = np.array(self.dots_X)
         self.geo.x_mean = np.mean(x).reshape(1, 1)[0][0]
         self.geo.x_std = np.std(x).reshape(1, 1)[0][0]
@@ -250,7 +251,7 @@ class ParsedData:
         self.geo.x_25 = np.percentile(x, 25).reshape(1, 1)[0][0]
         self.geo.x_50 = np.percentile(x, 50).reshape(1, 1)[0][0]
         self.geo.x_75 = np.percentile(x, 75).reshape(1, 1)[0][0]
-        # -----------------#
+        # рассчёт геометрических метрик позиции по оси Y
         y = np.array(self.dots_Y)
         self.geo.y_mean = np.mean(y).reshape(1, 1)[0][0]
         self.geo.y_std = np.std(y).reshape(1, 1)[0][0]
@@ -259,12 +260,11 @@ class ParsedData:
         self.geo.y_25 = np.percentile(y, 25).reshape(1, 1)[0][0]
         self.geo.y_50 = np.percentile(y, 50).reshape(1, 1)[0][0]
         self.geo.y_75 = np.percentile(y, 75).reshape(1, 1)[0][0]
-        # -----------------#
 
         print('computing metrics...')
         print('fixations...')
-
-        for fix in self.fixations:
+        
+        for fix in self.fixations: # рассчёт характеристик для фиксаций
             if len(fix.points) < 3:
                 continue
             self.secondary.fix_time += fix.time
@@ -274,32 +274,27 @@ class ParsedData:
             # self.secondary.min_curve = min(self.secondary.min_curve, fix.get_curve())
             # self.secondary.max_curve = min(self.secondary.max_curve, fix.get_curve())
             # self.secondary.avr_curve += fix.get_curve()
-            # spd = S / T = (S1 + S2 + S3) / (T1 + T2 + T3)
-            if fix.time < 0.80:
-                self.secondary.fix_l_80 += 1
-            if fix.time > 0.180:
+            if fix.time > 0.180: # выделение данных о фиксациях дольше 180мс
                 self.secondary.fix_g_180 += 1
                 self.secondary.fix_g_180_time += fix.time
                 self.secondary.fix_g_180_count += 1
-            if fix.time < 0.180:
+            if fix.time < 0.180: # выделение данных о фиксациях короче 180мс
                 self.secondary.fix_l_180 += 1
                 self.secondary.fix_l_180_time += fix.time
                 self.secondary.fix_l_180_count += 1 
-            if fix.time > 1:
-                self.secondary.fix_g_1000 += 1
-            if fix.time < 0.150:
+            if fix.time < 0.150: # выделение данных о фиксациях короче 150мс
                 self.secondary.short_fix_time += fix.time
                 self.secondary.short_fix_count += 1
                 self.secondary.fix_l_150_dist += fix.get_distance()
                 self.secondary.max_sf_speed = max(self.secondary.max_sf_speed, fix.get_avr_speed())
                 self.secondary.min_sf_speed = min(self.secondary.min_sf_speed, fix.get_avr_speed())
-            if 0.150 <= fix.time <= 0.900:
+            if 0.150 <= fix.time <= 0.900: # выделение данных о фиксациях дольше 150мс но короче 900мс
                 self.secondary.med_fix_time += fix.time
                 self.secondary.med_fix_count += 1
                 self.secondary.fix_g_150_dist += fix.get_distance()
                 self.secondary.max_lf_speed = max(self.secondary.max_lf_speed, fix.get_avr_speed())
                 self.secondary.min_lf_speed = min(self.secondary.min_lf_speed, fix.get_avr_speed())
-            if fix.time > 0.900:
+            if fix.time > 0.900: # выделение данных о фиксациях дольше 900мс
                 self.secondary.long_fix_time += fix.time
                 self.secondary.long_fix_count += 1
                 self.secondary.fix_g_150_dist += fix.get_distance()
@@ -307,7 +302,7 @@ class ParsedData:
                 self.secondary.min_lf_speed = min(self.secondary.min_lf_speed, fix.get_avr_speed())
 
         print('saccades...')
-        for sacc in self.saccades:
+        for sacc in self.saccades: # рассчёт характеристик для саккад
             if len(sacc.points) < 3:
                 continue
             self.secondary.sacc_time += sacc.time
@@ -327,6 +322,8 @@ class ParsedData:
             else:
                 self.secondary.short_sacc += 1
 
+
+        # инициализация переменных для рассчёта дополнительных характеристик
         i_count = 0
         s0 = self.raw_data.positionData[0]
         t0 = s0.time
@@ -335,7 +332,7 @@ class ParsedData:
         dist = 0
         v = -1
         p = None
-
+        # рассчёт дополнительных характеристик
         for step in self.raw_data.positionData:
             if p is not None:
                 if v != -1:
@@ -384,26 +381,22 @@ class ParsedData:
                 fix_count = 0
         self.secondary.avr_freq /= i_count
         print('calculating complete')
-#   35/39
-    #   35/39
 
-    def get_row(self, file_name):
+    def get_row(self, file_name):   # запрос характеристик в виде списка 
         print('forming a row... ' )
-        
         return self.get_df_row(file_name).loc[0, :].values.flatten().tolist()
 
-    def to_csv(self, file_name, file_to):
+    def to_csv(self, file_name, file_to): # вывод данных в файл формата .csv
         print('csv file... ' + file_to)
         row = self.get_row(file_name)
         print('appending a row...')
-        with open(file_to, 'a', newline='') as csvfile:
+        with open(file_to, 'a', newline='') as csvfile: # используется метод дозаписи в файл
             _writer = csv.writer(csvfile, delimiter=';')
             _writer.writerow(row)
         print('writen')
 
-    def get_df_row(self, file='none'):
+    def get_df_row(self, file='none'): # запрос характеристик в виде DataFrame
         all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
-
         df_row = DataFrame({'File' : [file],
                             'x_mean' : [self.geo.x_mean],
                             'x_std' : [self.geo.x_std],
@@ -496,7 +489,7 @@ class ParsedData:
                             })
         return df_row
 
-    def to_xls_by_row(self, file_name, file_to):
+    def to_xls_by_row(self, file_name, file_to): # вывод данных в файл формата excel файлов, по рядам (строкам)
         print('excel reading file ' + file_to)
         print('excel file preparing ' + file_to)
         print('forming headline...')
@@ -505,8 +498,6 @@ class ParsedData:
         print(df.__str__())
         print('computing metrics...')
         print('forming a row...')
-        #   35/39
-
         df_row = self.get_df_row(file_name)
 
         print('appending a row...')
@@ -516,19 +507,17 @@ class ParsedData:
         update_spreadsheet(file_to, df, df_row, sheet_name='Sheet1')
         print('writen')
 
-    def to_xls(self, file_name, file_to):
+    def to_xls(self, file_name, file_to): # вывод данных в файл формата excel файлов, путём обноления ячеек
+        # может использоваться при необходимости частичного исправления данных в уже имеющихся таблицах
+        # однако крайне не эффективен по временным затратам
         print('Not effective')
-        return
         print('excel reading file ' + file_to)
         print('excel file preparing ' + file_to)
         print('forming headline...')
 
         df = read_excel(file_to, engine='openpyxl')
         print(df.__str__())
-
         all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
-        # print(all_fix)
-
         new_row = len(df.get('File')) + 1
         update_cell(file_to, new_row, key_index(df, 'File'), file_name)
         update_cell(file_to, new_row, key_index(df, 'Method'), self.get_method())
@@ -670,11 +659,11 @@ class ParsedData:
         print('writen')
 
     @staticmethod
-    def ppi_to_xls(file_from, lines, file_to):
+    def ppi_to_xls(file_from, lines, file_to): # метод для добавления доп. информации о преимпульсном ингибировании
+        # использование этих данных не показало ожидаемого результата, однако оставлена возможность для доработки / добавления другой дополнительной информации
         print('excel file preparing ' + file_to)
         print('forming headline...')
         df = read_excel(file_to, engine='openpyxl')
-
         print('finding a row...')
         i = -1
         temp = 1
@@ -701,7 +690,7 @@ class ParsedData:
         update_cell(file_to, i, key_index(df, 'Max PPI'), max(ppi))
         print('PPI writen')
 
-    def __str__(self):
+    def __str__(self): # вывод в стоковом формате, выводитьcя частичная информация о размеченном отрезке
         s = '__Metrics:__\n'
         s += 'Time Frame: ' + self.time_frame.__str__() + ' Dots count: ' + self.dots.__str__() + '\n'
         s += 'Estimated Hrz: ' + (self.dots / self.time_frame).__str__() + '\n'
@@ -741,7 +730,7 @@ class ParsedData:
         return self.raw_data
 
     @staticmethod
-    def get_df_null_row():
+    def get_df_null_row(): # статический метод для запроса шаблона таблицы с рассчитываемыми характеристиками
         return DataFrame({'File' : [],
                           'x_mean' : [],
                           'x_std' : [],
@@ -824,12 +813,9 @@ class ParsedData:
                           'Min Saccade Time': [],
                           'Max Saccade Time': []})
 
-
-
-
+# метод для обновления excel таблиц
 def update_spreadsheet(path: str, _df, _new_row, sheet_name: str = "Sheet1"):
     '''
-
     :param path: Путь до файла Excel
     :param _df: Датафрейм Pandas для записи
     :param starcol: Стартовая колонка в таблице листа Excel, куда буду писать данные
@@ -846,7 +832,7 @@ def update_spreadsheet(path: str, _df, _new_row, sheet_name: str = "Sheet1"):
             wb[sheet_name].cell(startrow + ir, starcol + ic).value = _new_row.iloc[ir][ic]
     wb.save(path)
 
-
+# метод для обновления конкретной ячейки excel таблицы
 def update_cell(path: str, row, col, value, sheet_name: str = "Sheet1"):
     if col == -1:
         print('no key')
@@ -854,7 +840,6 @@ def update_cell(path: str, row, col, value, sheet_name: str = "Sheet1"):
     wb = load_workbook(path)
     wb[sheet_name].cell(row + 1, col + 1).value = value
     wb.save(path)
-
 
 def key_index(data_frame, key_name):
     i = 0
@@ -864,73 +849,3 @@ def key_index(data_frame, key_name):
         i += 1
     print("key wasn't found: " + key_name)
     return -1
-
-
-
-
-'''
-            
-        all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
-        row = [ file_name, self.get_method(),
-                (self.false_fix / self.time_frame * 60).__str__(),
-                (self.pong / self.time_frame * 60).__str__(),
-                (self.secondary.long_sacc / self.time_frame * 60).__str__(),
-                (self.secondary.short_sacc / self.time_frame * 60).__str__(),
-                self.secondary.max_curve.__str__(),
-                (self.secondary.avr_curve / (len(self.fixations) + len(self.saccades))).__str__(),
-                self.secondary.min_curve.__str__(),
-                self.time_frame.__str__(),
-                self.secondary.sacc_time.__str__(),
-                self.secondary.short_fix_time.__str__(),
-                (self.secondary.med_fix_time + self.secondary.long_fix_time).__str__(),
-                self.secondary.med_fix_time.__str__(),
-                self.secondary.long_fix_time.__str__(),
-                self.secondary.fix_l_180_time.__str__(),
-                self.secondary.fix_g_180_time.__str__(),
-                (self.secondary.short_fix_count / all_fix * 100).__str__(),
-                ((1 - self.secondary.short_fix_count / all_fix) * 100).__str__(),
-                (self.secondary.med_fix_count / all_fix * 100).__str__(),
-                (self.secondary.long_fix_count / all_fix * 100).__str__(),
-                (self.secondary.fix_l_180 / all_fix * 100).__str__(),
-                (self.secondary.fix_g_180 / all_fix * 100).__str__(),
-                (self.secondary.short_fix_time / self.time_frame).__str__(),
-                ((self.secondary.med_fix_time + self.secondary.long_fix_time) / self.time_frame).__str__(),
-                (self.secondary.med_fix_time / self.time_frame).__str__(),
-                (self.secondary.long_fix_time / self.time_frame).__str__(),
-                (self.secondary.fix_l_180_time / self.time_frame).__str__(),
-                (self.secondary.fix_g_180_time / self.time_frame).__str__(),
-                (self.secondary.short_fix_count / self.time_frame * 60).__str__(),
-                ((self.secondary.med_fix_count + self.secondary.long_fix_count) / self.time_frame * 60).__str__(),
-                (self.secondary.med_fix_count / self.time_frame * 60).__str__(),
-                (self.secondary.long_fix_count / self.time_frame * 60).__str__(),
-                (self.secondary.fix_l_180 / self.time_frame * 60).__str__(),
-                (self.secondary.fix_g_180 / self.time_frame * 60).__str__(),
-                (len(self.fixations) / self.time_frame).__str__(),
-                self.secondary.avr_freq.__str__(),
-                self.secondary.max_freq.__str__(),
-                self.secondary.avr_acc.__str__(),
-                self.secondary.min_acc.__str__(),
-                self.secondary.max_acc.__str__(),
-                self.avrSpeed.__str__(),
-                self.minSpeed.__str__(),
-                self.maxSpeed.__str__(),
-                self.secondary.avr_i_acc.__str__(),
-                self.secondary.min_i_acc.__str__(),
-                self.secondary.max_i_acc.__str__(),
-                self.secondary.avr_i_speed.__str__(),
-                self.secondary.min_i_speed.__str__(),
-                self.secondary.max_i_speed.__str__(),
-                (self.secondary.fix_distance / self.secondary.fix_time).__str__(),
-                self.secondary.min_f_speed.__str__(),
-                self.secondary.max_f_speed.__str__(),
-                (self.secondary.sacc_distance / self.secondary.sacc_time).__str__(),
-                self.secondary.min_s_speed.__str__(),
-                self.secondary.max_s_speed.__str__(),
-                (self.secondary.sacc_distance / len(self.saccades)).__str__(),
-                self.secondary.min_s_length.__str__(),
-                self.secondary.max_s_length.__str__(),
-                (self.secondary.sacc_time / len(self.saccades)).__str__(),
-                self.secondary.min_s_time.__str__(),
-                self.secondary.max_s_time.__str__(),
-                'none', 'none', 'none']
-'''
