@@ -1,8 +1,8 @@
 import pickle
-from Evaluate.MLPEval import MLPEval
-from Evaluate.DecisionTreeEval import DecisionTreeEval
-from Evaluate.RandomForestEval import RandomForestEval
-from Evaluate.BasicEval import BasicEval
+from ..Evaluate.MLPEval import MLPEval
+from ..Evaluate.DecisionTreeEval import DecisionTreeEval
+from ..Evaluate.RandomForestEval import RandomForestEval
+from ..Evaluate.BasicEval import BasicEval
 from sklearn.metrics import (
     accuracy_score,
     f1_score
@@ -14,8 +14,7 @@ class HybridEval():
         self.acc = -1
         self.f1 = -1
 
-
-    def edu(self, train_X, train_Y, test_X, test_Y, model_names):
+    def edu(self, train_X, train_Y, test_X, test_Y, model_names): # вызов обучения (и сохранения) выбранных моделей (model_names)
         if model_names.__contains__('Basic'):
             basic = BasicEval()
             basic.edu(train_X, train_Y, test_X, test_Y)
@@ -37,7 +36,7 @@ class HybridEval():
             self.models.append(mlp)
             pickle.dump(mlp, open('H_mlp', 'wb')) 
         
-    def load(self, model_names):
+    def load(self, model_names): # вызов загрузка предварительно обученных выбранных моделей (model_names)
         if model_names.__contains__('Basic'):
             basic = pickle.load(open('H_bsc', 'rb')) 
             self.models.append(basic)
@@ -51,14 +50,32 @@ class HybridEval():
             mlp = pickle.load(open('H_mlp', 'rb')) 
             self.models.append(mlp)
 
-    def eval(self, test_X, test_Y):
+    def evaluate(self, data, treshold = 0.1): # метод оценки данных. treshold - порог, используемый для фильтрации
+        preds = []
+        for model in self.models:
+            y_pred = model.evaluate(data)
+            preds.append(y_pred)
+        eval = []
+        for j in range(len(preds[0])):
+            p_sum = preds[0][j]
+            for i in range(1,len(self.models)):
+                p_sum += preds[i][j]
+            if p_sum == 0 or p_sum == len(self.models):
+                eval.append(preds[0][j])
+            else:
+                if p_sum/len(self.models) >= treshold:
+                    eval.append(1)
+                else:
+                    eval.append(0)                
+        return eval
+    
+    def eval(self, test_X, test_Y): # метод для оценки качества модели
         preds = []
         for model in self.models:
             y_pred = model.evaluate(test_X)
             preds.append(y_pred)
             self.f1 = f1_score(test_Y, y_pred) # результаты по одному из разбиений / results for one sample
             self.acc = accuracy_score(test_Y, y_pred)
-        
         sure = []
         unsure = []
         test_sure = []
@@ -67,7 +84,7 @@ class HybridEval():
             p_sum = preds[0][j]
             for i in range(1,len(self.models)):
                 p_sum += preds[i][j]
-            if p_sum == 0 or p_sum == len(self.models):
+            if p_sum == 0 or p_sum == len(self.models): # выделение "уверенных" (оценки всех используемых моделей совпадают) и "неуверенных" (оценки не совпадают) записей
                 sure.append(preds[0][j])
                 test_sure.append(test_Y['AU_cat'][j])
             else:
@@ -75,17 +92,14 @@ class HybridEval():
                 test_unsure.append(test_Y['AU_cat'][j])
 
         print('Sure:', format(len(sure) / (len(sure) + len(unsure)) * 100, '.2f') + '%', 'F1:', f1_score(sure, test_sure))
-        unsure = self.filter(unsure, 0.1)
+        unsure = self.filter(unsure, 0.1) # фильрация "неуверенных" оценок
         print('UnSure:', format(len(unsure) / (len(sure) + len(unsure)) * 100, '.2f') + '%', 'F1:', f1_score(unsure, test_unsure))
         
-    def filter(self, pred, treshold):
+    def filter(self, pred, treshold): # метод фильрации данных
         for i in range(len(pred)):
             if pred[i] >= treshold:
                 pred[i] = 1
             else:
                 pred[i] = 0
         return pred
-
-
-
-#D:\PythonProjects\Faeyeton\_Data
+    
