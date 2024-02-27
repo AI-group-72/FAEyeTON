@@ -11,8 +11,8 @@ from sklearn.metrics import (
     f1_score
 )
 
-from Evaluate.Evaluator import Evaluator
-
+from ..Evaluate.Evaluator import Evaluator
+# модель оценки "многослойный перцептрон"
 class MLPEval(Evaluator):
     def __init__(self):
         self.model = None
@@ -28,28 +28,29 @@ class MLPEval(Evaluator):
         else:
             return self.model.predict(data)
 
-    def redu(self, train_X, train_Y, test_X, test_Y):
+    def redu(self, train_X, train_Y, test_X, test_Y): # переобучение на новых данных со старыми параметрами
         self.model.fit(train_X, train_Y)
         y_pred = self.model.predict(test_X)
         self.acc = accuracy_score(test_Y, y_pred)
         self.f1 = f1_score(test_Y, y_pred)        
 
-    def edu(self, train_X, train_Y, test_X, test_Y):
+    def edu(self, train_X, train_Y, test_X, test_Y): # обучение на новых данных
+        # наборы используемых параметров
         sol = ['lbfgs', 'sgd', 'adam']
         ac = ['identity', 'logistic', 'tanh', 'relu']
         err = 0
         now1 = datetime.datetime.now()
-        print(now1)
-        for i in range(1, 100):
+        print(now1) # замер времени
+        for i in range(5):  # перебор случайных состояний
             print(i)
-            for j in range(1,20):
+            for j in range(1,20): # перебор параметров
                 for s in sol:
-                    for a in ac:
+                    for a in ac: 
                         model = MLPClassifier(solver=s, activation = a, alpha=1e-5, hidden_layer_sizes=(j), random_state=i)
                         model.fit(train_X, train_Y)
                         y_pred = model.predict(test_X)
                         f = f1_score(test_Y, y_pred)
-                        if f > err:
+                        if f > err: # сохранение параметров лучшей модели
                             print(f)
                             rand = i
                             err = f
@@ -63,8 +64,8 @@ class MLPEval(Evaluator):
         
         now = datetime.datetime.now()
         print(now)
-        print('Total time:', now - now1)
-
+        print('Total time:', now - now1) # вывод времени
+        # переобучение по лучшим выявленным параметрам
         self.model = MLPClassifier(solver=S, activation = Ac, alpha=1e-5, hidden_layer_sizes=(h), random_state=rand)
         self.model.fit(train_X, train_Y)
         y_pred = self.model.predict(test_X)
@@ -103,7 +104,7 @@ class MLPEval(Evaluator):
         sol = ['lbfgs', 'sgd', 'adam']
         ac = ['identity', 'logistic', 'tanh', 'relu']
         err = 0
-        for i in range(5): # перебор случайных состояний / iterating through random states
+        for i in range(1): # перебор случайных состояний / iterating through random states
             print(i)
             for j in range(1,20): # Перебор параметров / Iterating through the parameters
                 for s in sol:
@@ -158,18 +159,10 @@ class MLPEval(Evaluator):
         self.acc = accuracy_score(test_Y, y_pred)         
         self.cross_f1 = err # усреднённые результаты по всем разбиениям / averaged results for all samples
         self.cross_acc = cross_acc
-
     
-    def edu_args(self, train_X, train_Y, test_X, test_Y, solver, activation, h_l_s, rand_state):
-        #for i in range(100):
+    def edu_args(self, train_X, train_Y, test_X, test_Y, solver, activation, h_l_s, rand_state): # обучение по фиксированным параметрам
         model = MLPClassifier(solver=solver, activation=activation, alpha=1e-5, hidden_layer_sizes=(h_l_s), random_state=rand_state)
         model.fit(train_X, train_Y)
         y_pred = model.predict(test_X)
         self.acc = accuracy_score(test_Y, y_pred)
         self.f1 = f1_score(test_Y, y_pred)  
-        #solver='lbfgs', activation = 'logistic', hidden_layer_sizes=(12)
-        
-# 18
-# 30
-        
-# gini
