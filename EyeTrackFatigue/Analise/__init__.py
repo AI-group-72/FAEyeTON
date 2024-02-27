@@ -1,27 +1,17 @@
-# модуль анализа входных данных, выделяющий интересующие нас метрики
-from Input import read_csv_file
-from Analise.ParsedData import ParsedData
+# модуль анализа входных данных, выделяющий количественные характеристики
+# основной класс - ParsedData, объединяем мметоды вычисления, обработки и хранение данных о количественных характеристиках
+from ..Input import read_csv_file
+from ..Analise.ParsedData import ParsedData
 
 
-# стадия 1
-
-def clear(input_section):
-    # первичная обработка данных
-    return input_section
-
-
-def interpolation(input_section):
-    # первичная обработка данных
-    return input_section
-
-
+# Парсинг по умолчанию
 def parse_ff_tf(file_from, file_to):
     section = read_csv_file(file_from)
     metrics = ParsedData()
     metrics.parse(section, 3, 5)
     metrics.to_csv(file_from, file_to)
 
-
+# Проверка данных на наличие пред-обработки / интерполяции
 def check_interpolation():
     section = read_csv_file('../test_data1.csv')
     s = 0
@@ -32,18 +22,3 @@ def check_interpolation():
             s += 1
     print("Suspicion: " + (s / len(section.positionData)).__str__())
     print(s)
-
-'''
-section = read_csv_file('D:/PythonProjects/Participant 3/22-12-26-game-afternoon.csv')
-metrics = ParsedData()
-metrics.parse(section, 2, 0.1)
-metrics.calc_metrics()
-metrics.to_xls_by_row('test.csv', '../UI/masterfile.xlsx')
-'''
-
-'''
-section = read_csv_file('../test_data1.csv')
-metrics = ParsedData()
-metrics.parse(section, 1, 5, 2.5)
-metrics.to_xls('test_data1', '../UI/masterfile.xlsx')
-'''
