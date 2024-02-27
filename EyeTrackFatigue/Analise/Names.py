@@ -1,4 +1,5 @@
-def eng_to_rus(name):
+# файл наименований
+def eng_to_rus(name): # функция, проставляющая соответствия между внутренним (англоязычным) и внешним (русским) названием
     if name == 'File':  return 'Файл'
 
     if name == 'x_mean':  return 'Усредненная позиция взгляда по оси X'
@@ -8,7 +9,7 @@ def eng_to_rus(name):
     if name == 'x_25':  return 'Процентиль 25 позиции взгляда по оси X'
     if name == 'x_50':  return 'Процентиль 50 позиции взгляда по оси X'
     if name == 'x_75':  return 'Процентиль 75 позиции взгляда по оси X'
-    if name == 'y_mean':  return 'Усредннная позиция взгляда по оси Y'
+    if name == 'y_mean':  return 'Усредненная позиция взгляда по оси Y'
     if name == 'y_std':  return 'Среднее квадратичное отклонение позиции взгляда по оси Y'
     if name == 'y_min':  return 'Минимальная позиция взгляда по оси Y'
     if name == 'y_max':  return 'Максимальная позиция взгляда по оси Y'
@@ -16,7 +17,7 @@ def eng_to_rus(name):
     if name == 'y_50':  return 'Процентиль 50 позиции взгляда по оси Y'
     if name == 'y_75':  return 'Процентиль 75 позиции взгляда по оси Y'
                             
-    if name == 'False Fixation, per minute':  return 'Обособленные фиксации, количество в минуту'
+    if name == 'False Fixation, per minute':  return 'Ложные фиксации, количество в минуту'
     if name == 'False Saccades, per minute':  return 'Сверхкороткие саккады, количество в минуту'
     if name == 'Saccades with amplitude > 6 degrees, per minute':  return 'Саккады с амплитудой больше 6 градусов, количество в минуту'
     if name == 'Saccades with amplitude < 6 degrees, per minute':  return 'Саккады с амплитудой меньше 6 градусов, количество в минуту'
@@ -83,8 +84,7 @@ def eng_to_rus(name):
     if name == 'Average Saccade Time':  return 'Средняя длительность саккады'
     if name == 'Min Saccade Time':  return 'Минимальная длительность саккады'
     if name == 'Max Saccade Time':  return 'Максимальная длительность саккады'
-
-
                           
-    print(name, 'have no rus name!')
+    print(name, 'have no rus name!') # сообщение на случай отсутвтия соответствия
     return name
+
