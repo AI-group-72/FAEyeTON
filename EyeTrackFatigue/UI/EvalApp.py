@@ -2,25 +2,22 @@ import sys
 from time import sleep
 import pandas as pd
 import pickle
-from Analise.Names import eng_to_rus
-from Evaluate import *
-from Input import read_csv_file
-from Analise.ParsedData import ParsedData
-from Evaluate.RandomForestEval import RandomForestEval
-from Evaluate.DecisionTreeEval import DecisionTreeEval
-from Evaluate.MLPEval import MLPEval
+from ..Analise.Names import eng_to_rus
+from ..Input import read_csv_file
+from ..Analise.ParsedData import ParsedData
+from ..Evaluate.RandomForestEval import RandomForestEval
+from ..Evaluate.DecisionTreeEval import DecisionTreeEval
+from ..Evaluate.MLPEval import MLPEval
+from ..Evaluate.BasicEval import BasicEval
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import *
 from sklearn.metrics import (
-    confusion_matrix,
     accuracy_score,
-    precision_score,
-    recall_score,
     f1_score
 )
 
 class EvalApp(QMainWindow):
-    def __init__(self):
+    def __init__(self): # инициализация визуальных компонентов
         super().__init__()
 
         self.rb_base = QRadioButton('Базовый', self)
@@ -34,7 +31,7 @@ class EvalApp(QMainWindow):
         self.rb_group.addButton(self.rb_dtc)
         self.rb_group.addButton(self.rb_mlp)
         self.rb_mlp.setChecked(True)
-        self.model_name = 'MLP'
+        self.model_name = 'Basic'
         self.rb_group.buttonClicked.connect(self.rb_click)
 
         self.data_list1 = []
@@ -67,7 +64,7 @@ class EvalApp(QMainWindow):
         self.ideal_min = ParsedData.get_df_null_row().drop(columns=['File'])
         self.ideal_max = ParsedData.get_df_null_row().drop(columns=['File'])
         self.f1_line = QLineEdit('0.0', self)
-
+        # группы визуальных компонентов
         self.data_group = []
         self.edu_group = []
         self.eval_group = []
@@ -80,10 +77,10 @@ class EvalApp(QMainWindow):
 
         self.setup_ui()
 
-    def setup_ui(self):
+    def setup_ui(self): # инициализация с конкретными значениями
         self.setGeometry(300, 300, 1010, 650)
         self.setWindowTitle('Оценка данных')
-
+        # группа загрузки данных
         data_label1 = QLabel('Бодрые', self)
         data_label1.setGeometry(80, 10, 200, 15)
         self.data_group.append(data_label1)
@@ -133,7 +130,7 @@ class EvalApp(QMainWindow):
         self.data_group.append(self.file_size_line)
 
     ##################################################################################################################
-
+        # группа обучения моделей
         edu_files_btn = QPushButton('Разбить выборку для обучения', self)
         edu_files_btn.setGeometry(280, 10, 200, 30)
         edu_files_btn.clicked.connect(self.take_sample)
@@ -176,7 +173,7 @@ class EvalApp(QMainWindow):
         
 
     ##################################################################################################################
-
+        # группа выполнения оценки
         eval_label = QLabel('На оценку', self)
         eval_label.setGeometry(550, 40, 200, 10)
         self.eval_list_text.setGeometry(550, 50, 200, 150)
@@ -197,7 +194,6 @@ class EvalApp(QMainWindow):
         choose_std_btn.clicked.connect(self.check_box_std)
         self.eval_group.append(choose_std_btn)
 
-        # Заглушка
         choose_find = QLineEdit('..', self)
         choose_find.setGeometry(820, 370, 180, 30)
         self.eval_group.append(choose_find)
@@ -250,9 +246,9 @@ class EvalApp(QMainWindow):
         self.check_box_std()
         self.show()
 
-    def rb_click(self, rb):
+    def rb_click(self, rb): # выбор используемых моделей оценки
         if rb.text() == 'Базовый':
-            self.model_name = 'Base'
+            self.model_name = 'Basic'
         elif rb.text() == 'Random Forest':
             self.model_name = 'RFC'
         elif rb.text() == 'Decision Tree':
@@ -260,13 +256,13 @@ class EvalApp(QMainWindow):
         elif rb.text() == 'MLP':
             self.model_name = 'MLP'
 
-    def create_check_box(self, parent):
+    def create_check_box(self, parent): # создание прокручиваемого окошка с выбором используемых численных характеристик
         x = 0
         y = 0
         w = parent.width()
         h = 15
         self.scr_area = QScrollArea(parent)
-        for col in ParsedData.get_df_null_row().drop(columns='File').head():
+        for col in ParsedData.get_df_null_row().drop(columns='File').head(): # инициализация окошек выбора по заголовку данных от класса ParsedData
             chbx = QCheckBox(eng_to_rus(str(col)), self.scr_area)
             chbx.setChecked(self.keys[col].iloc(0) == 1)
             chbx.setGeometry(x, y, w, h)
@@ -277,17 +273,17 @@ class EvalApp(QMainWindow):
         self.scrollbar.setMaximum(y - parent.height() + 15)
         self.scrollbar.setMinimum(-8)
     
-    def scroll_check_box(self):
+    def scroll_check_box(self): # реализация прокрутки
         value = self.scrollbar.value()
         self.scr_area.move(0, -value)
 
-    def check_box_click(self):
+    def check_box_click(self): # переназначение используемых численных характеристик
         i = 0
         for col in self.keys.head():
             self.keys[col][0] = 1 if self.key_boxes[i].isChecked() else 0
             i += 1
     
-    def check_box_all(self):
+    def check_box_all(self): # выбор ВСЕХ численных характеристик
         i = 0
         fl = not self.key_boxes[i].isChecked()
         for col in self.keys.head():
@@ -295,8 +291,21 @@ class EvalApp(QMainWindow):
             self.key_boxes[i].setChecked(fl)
             i += 1
     
-    def check_box_std(self):
-        std = {'x_mean', 'x_std', 'x_min', 'x_max', 'x_25', 'x_50', 'x_75', 'y_mean', 'y_std', 'y_min', 'y_max', 'y_25', 'y_50', 'y_75', 'Saccades with amplitude < 6 degrees, per minute', 'Max Curve', 'Fixation time > 150 ms', 'Fixation time > 180 ms', '% of Fixations < 150 ms', '% of Fixations > 150 ms', '% of Fixations > 900 ms', '% of Fixations < 180 ms', '% of Fixations > 180 ms', 'Fixation time < 150 ms, per time', 'Fixation time > 150 ms, per time', '% of Fixations > 150 ms, per minute', '% of Fixations < 180 ms, per minute', 'Min Speed', 'Max Speed', 'Average Speed in interval (1s)', 'Max Speed in interval (1s)', 'Average Fixation Speed', 'Max Fixation Speed', 'Average Saccade Length', 'Min Saccade Length', 'Max Saccade Length'}
+    def check_box_std(self): # выбор ВСЕХ численных характеристик
+        '''
+        Текущий стандартный набор:
+        средняя кривизна траектории движения взгляда;  +
+        минимальная кривизна траектории движения взгляда; +
+        минимальная длина саккады; +
+        доля времени, проведённого в фиксациях короче 150 мс;  +
+        доля фиксаций короче 150 мс.  +
+        средняя скорость внутри области фиксации, °/сек; +
+        максимальная скорость внутри области фиксации, °/сек + 
+        '''
+        std = {'Average Curve', 'Min Curve', 'Min Saccade Time', 'Average Fixation Speed', 'Max Fixation Speed', "% of Fixations < 150 ms", "Fixation time < 150 ms, per time"}
+        # вариации наборов, можно добавить свои
+        # уточнить русское-английское название характеристик можно в файле Names в модуле Analise
+        #std = {'x_mean', 'x_std', 'x_min', 'x_max', 'x_25', 'x_50', 'x_75', 'y_mean', 'y_std', 'y_min', 'y_max', 'y_25', 'y_50', 'y_75', 'Saccades with amplitude < 6 degrees, per minute', 'Max Curve', 'Fixation time > 150 ms', 'Fixation time > 180 ms', '% of Fixations < 150 ms', '% of Fixations > 150 ms', '% of Fixations > 900 ms', '% of Fixations < 180 ms', '% of Fixations > 180 ms', 'Fixation time < 150 ms, per time', 'Fixation time > 150 ms, per time', '% of Fixations > 150 ms, per minute', '% of Fixations < 180 ms, per minute', 'Min Speed', 'Max Speed', 'Average Speed in interval (1s)', 'Max Speed in interval (1s)', 'Average Fixation Speed', 'Max Fixation Speed', 'Average Saccade Length', 'Min Saccade Length', 'Max Saccade Length'}
         #std = {'x_mean', 'x_std', 'x_min', 'x_max', 'x_25', 'x_50', 'x_75', 'y_mean', 'y_std', 'y_min', 'y_max', 'y_25', 'y_50', 'y_75'}
         #std = {'x_mean', 'y_mean', 'Average Curve', 'Min Curve', 'Min Saccade Time', 'Average Fixation Speed', "% of Fixations < 150 ms, per minute", 'Average Fixation Speed, < 150ms'}
         i = 0
@@ -305,7 +314,7 @@ class EvalApp(QMainWindow):
             self.key_boxes[i].setChecked(col in std)
             i += 1
 
-    def calc_df(self, files):
+    def calc_df(self, files): # рассчёт характеристик выбранных файлов
         arg = float(self.arg_line.text())
         data_frame = ParsedData.get_df_null_row()
         file_size = -1  if self.file_size_line.text() == 'нет' else float(self.file_size_line.text())
@@ -313,48 +322,36 @@ class EvalApp(QMainWindow):
             p = 1
             print(file_size)
             for section in read_csv_file(line).split(file_size):
-                # print(section.time_frame())
-                # print(section)
                 metrics = ParsedData()
-                metrics.parse(section, 2, arg)
+                metrics.parse(section, 2, arg) # по умолчанию для разметки используется метод определения фиксаций по абсолютному расстоянию, можно переключить
                 metrics.calc_metrics()
                 row = metrics.get_df_row(line.split('/')[-1] + ('' if file_size == -1 else 'part '+str(p)))
                 p += 1
                 data_frame = pd.concat([data_frame, row], ignore_index=True)
         return data_frame
 
-    def calc_data1(self):
+    def calc_data1(self): # загрузка и рассчёт "бодрых" записей
         csv_path, _ = QFileDialog.getOpenFileNames(caption='Загрузите Бодрых')
         self.data_list1 = self.calc_df(csv_path)
         self.data_list_text1.setPlainText('')
         for line in self.data_list1['File']:
             self.data_list_text1.setPlainText(self.data_list_text1.toPlainText() + line + '\n')
     
-    def calc_data2(self):
+    def calc_data2(self): # загрузка и рассчёт "уставших" записей
         csv_path, _ = QFileDialog.getOpenFileNames(caption='Загрузите Уставших')
         self.data_list2 = self.calc_df(csv_path)
         self.data_list_text2.setPlainText('')
         for line in self.data_list2['File']:
             self.data_list_text2.setPlainText(self.data_list_text2.toPlainText() + line + '\n')
-        self.set_status(1)
+        self.set_status(1) # обновление статуса процесса
 
-    def save_data(self):
+    def save_data(self): # сохранение посчитанных данных
         file_name = QFileDialog.getSaveFileName(directory='_Data')
         print(file_name)
-        # self.data_list1.to_csv(file_name[0] + '.csv', sep=';', index=False)
-        d1 = self.data_list1.drop(columns=['File'])
-        d2 = self.data_list2.drop(columns=['File'])
-        gen = pd.concat([d1, d2],axis=0)
-        d1 = (d1-gen.mean())/gen.std() 
-        d2 = (d2-gen.mean())/gen.std() 
-        d1 = pd.concat([self.data_list1['File'], d1], axis=1)
-        d2 = pd.concat([self.data_list2['File'], d2], axis=1)
         self.data_list1.to_csv(file_name[0] + ' Бодрые.csv', sep=';', index=False)
         self.data_list2.to_csv(file_name[0] + ' Усталые.csv', sep=';', index=False)
-        d1.to_csv(file_name[0] + ' Бодрые Норм.csv', sep=';', index=False)
-        d2.to_csv(file_name[0] + ' Усталые Норм.csv', sep=';', index=False)
 
-    def load_data(self):
+    def load_data(self): # загрузка посчитанных данных
         file_name = QFileDialog.getOpenFileName(directory='_Data', caption='Бодрые')
         self.data_list1 = pd.read_csv(file_name[0], sep=';')
         file_name = QFileDialog.getOpenFileName(directory='_Data', caption='Уставшие')
@@ -365,21 +362,23 @@ class EvalApp(QMainWindow):
         self.data_list_text2.setPlainText('')
         for line in self.data_list2['File']:
             self.data_list_text2.setPlainText(self.data_list_text2.toPlainText() + str(line) + '\n')
-        self.set_status(1)
+        self.set_status(1) # обновление статуса процесса
 
-    def take_sample(self):
+    def take_sample(self): # генерация выборки из данных
         print('load edu button click')
-        #self.eval_list = ParsedData.get_df_null_row() # pd.concat([self.data_list1, self.data_list2])
-        self.edu_list1 = self.data_list1.sample(n=int(0.8*len(self.data_list1)))
-        self.edu_list2 = self.data_list2.sample(n=int(0.8*len(self.data_list2)))
+        self.edu_list1 = self.data_list1.sample(n=int(0.8*len(self.data_list1))) # выборки генерируются раномерно
+        self.edu_list2 = self.data_list2.sample(n=int(0.8*len(self.data_list2))) # по 80% бодрых и уставших записей для обучения, оставшиеся - для проверки
         ev1 = pd.concat([self.data_list1, self.edu_list1]).drop_duplicates(keep=False)
         ev2 = pd.concat([self.data_list2, self.edu_list2]).drop_duplicates(keep=False)
         self.eval_list = pd.concat([ev1, ev2], ignore_index=True)
+        '''
+        # проверочный вывод в консоль
         print(len(self.data_list1))
         print(len(self.data_list2))
         print(len(self.edu_list1))
         print(len(self.edu_list2))
         print(len(self.eval_list))
+        '''
         self.edu_list_text1.setPlainText('')
         for _, row in self.edu_list1.iterrows():
             self.edu_list_text1.setPlainText(self.edu_list_text1.toPlainText() + str(row['File']) + '\n')            
@@ -387,108 +386,41 @@ class EvalApp(QMainWindow):
         for _, row in self.edu_list2.iterrows():
             self.edu_list_text2.setPlainText(self.edu_list_text2.toPlainText() + str(row['File']) + '\n')
 
-        #print(self.eval_list)
         self.eval_list_text.setPlainText('')
         for _, row in self.eval_list.iterrows():
-            self.eval_list_text.setPlainText(self.eval_list_text.toPlainText() + str(row['File']) + '\n')        
-            
-    def do_edu(self):
-        if self.model_name == 'Basic':
-            self.do_basic_edu()
-        else:
-            self.do_model_edu()
+            self.eval_list_text.setPlainText(self.eval_list_text.toPlainText() + str(row['File']) + '\n')                 
 
-    def do_basic_edu(self):
-        print('edu')
-        print('---------')
-        mean = [0] * len(ParsedData.get_df_null_row().drop(columns=['File']).columns.values)
-        for _, row in self.edu_list1.iterrows():
-            for i in range(1, len(row)):
-                mean[i-1] += row[self.edu_list1.columns[i]]
-        for i in range(0, len(mean)):
-            mean[i] /= len(self.edu_list1)        
-        self.ideal_max = ParsedData.get_df_null_row().drop(columns=['File'])
-        self.ideal_max.loc[0] = mean
-        
-        print('---------')
-        mean = [0] * len(ParsedData.get_df_null_row().drop(columns=['File']).columns.values)
-        for _, row in self.edu_list2.iterrows():
-            for i in range(1, len(row)):
-                mean[i-1] += row[self.edu_list1.columns[i]]
-        for i in range(0, len(mean)):
-            mean[i] /= len(self.edu_list2)        
-        
-        self.ideal_min = ParsedData.get_df_null_row().drop(columns=['File'])
-        self.ideal_min.loc[0] = mean
-        self.set_status(2)
-            
+    def save_edu_file(self): # сохранение обученной модели
+        pkl_filename = QFileDialog.getSaveFileName(directory='_Models')[0] # выбор имени
+        with open(pkl_filename, 'wb') as file: 
+            pickle.dump(self.model, file) 
 
-    def save_edu_file(self):
-        pkl_filename = QFileDialog.getSaveFileName(directory='_Models')[0]
-        if self.model_name == 'Base':
-            with open(pkl_filename, 'wb') as file: 
-                pickle.dump((self.ideal_min, self.ideal_max), file)
-                print('Save')
-                print(self.ideal_min)
-        else:
-            with open(pkl_filename, 'wb') as file: 
-                pickle.dump(self.model, file) 
-
-
-    def load_edu_file(self, pkl_filename ='model.pkl'):
-        pkl_filename = QFileDialog.getOpenFileName(directory='_Models', caption='Загрузите модель')[0]
+    def load_edu_file(self, pkl_filename ='model.pkl'): # загрузка обученной модели
+        pkl_filename = QFileDialog.getOpenFileName(directory='_Models', caption='Загрузите модель')[0] # выбор файла
         if pkl_filename == '':
             return
-        if self.model_name == 'Base':
-            with open(pkl_filename, 'rb') as file: 
-                base_model = pickle.load(file) 
-                self.ideal_min = base_model[0]
-                self.ideal_max = base_model[1]
-                print('Load')
-                print(self.ideal_min)
-        else:
-            #pkl_filename = "rfc_1_acc_1.00.pkl"
-            with open(pkl_filename, 'rb') as file: 
-                self.model = pickle.load(file)
-                if self.model.get_name == 'MLP':
-                    self.rb_mlp.setChecked(True)
-                elif self.model.get_name == 'DTC':
-                    self.rb_dtc.setChecked(True)
-                elif self.model.get_name == 'RFC':
-                    self.rb_rfc.setChecked(True)
+        with open(pkl_filename, 'rb') as file: # загрузки и определение типа модели
+            self.model = pickle.load(file)
+            if self.model.get_name == 'Basic':
+                self.rb_base.setChecked(True)
+            if self.model.get_name == 'MLP':
+                self.rb_mlp.setChecked(True)
+            elif self.model.get_name == 'DTC':
+                self.rb_dtc.setChecked(True)
+            elif self.model.get_name == 'RFC':
+                self.rb_rfc.setChecked(True)
+        self.set_status(2) # переключение статуса процесса
 
-        self.set_status(2)
-
-
-    def do_model_eval(self):
-        print('model eval')
-        test_X = self.eval_list.drop(columns = ['File'])
-        test_Y = pd.DataFrame({
-            'fatique' : [1] * (len(self.data_list1) - len(self.edu_list1)) + [0] * (len(self.data_list2) - len(self.edu_list2))
-        })
-        y_pred = self.model.predict(test_X)
-        m = accuracy_score(test_Y, y_pred)
-        self.corr = m
-        self.f1_line.setText(format(m,'.2f'))
-
-
-    def do_eval(self):
+    def do_eval(self): # выполнение оценки
         print('eval')
-        #self.load_edu_file()
         self.res_list1 = ParsedData.get_df_null_row()
         self.res_list2 = ParsedData.get_df_null_row()
-        #&#&#&@#@&#@#@#@#@#@#@#____________________---------------------     
         file_data = self.eval_list.drop(columns='File')
-        #, self.data_list2.drop(columns='File'), ignore_index=True)
-        #file_data = self.data_list2.drop(columns='File')
-        
-        if self.model_name == 'Basic':
-            tired = BasicEval.evaluate(self.keys, self.ideal_max, self.ideal_min, row)
-        else:
-            for col in self.keys.head():
-                if self.keys[col][0] == 0:
-                    file_data = file_data.drop(columns=[col])
-            tired = self.model.evaluate(file_data)
+    
+        for col in self.keys.columns:
+            if self.keys[col][0] == 0 and file_data.columns.__contains__(col):
+                file_data = file_data.drop(columns=[col])
+        tired = self.model.evaluate(file_data)
         for i in range(len(tired)):
             if not tired[i]:
                 self.res_list1.loc[len(self.res_list1)] = self.eval_list['File'][i]
@@ -498,6 +430,7 @@ class EvalApp(QMainWindow):
         self.corr = 0
         self.err = 0
         print(self.res_list1)
+        # подсчёт верных и неверных оценок (по соответствию с изначально загруженными данными)
         for _, row in self.res_list1.iterrows():
             if self.data_list_text1.toPlainText().__contains__(row['File']) : # gjghfdbnm
                 self.corr += 1
@@ -513,8 +446,7 @@ class EvalApp(QMainWindow):
         self.f1_line.setText(format(corr_sum, '.2f'))
         self.print_result()
 
-   
-    def print_result(self):
+    def print_result(self): # вывод результатов
         print('print result')
         self.res_list_text1.setPlainText('')
         for _, row in self.res_list1.iterrows():
@@ -522,10 +454,21 @@ class EvalApp(QMainWindow):
         self.res_list_text2.setPlainText('')
         for _, row in self.res_list2.iterrows():
             self.res_list_text2.setPlainText(self.res_list_text2.toPlainText() + str(row['File']) + '\n')
-        self.set_status(3)
+        self.output_result() # вывод результатов оценки в файл (можно закомментировать, если не требуется)
+        self.set_status(3) # переключение статуса процесса
 
-    def do_model_edu(self, redu=False):
-        #self.edu_list1 = 
+    def output_result(self): # вывод результатов оценки в файл
+        df = pd.DataFrame({ 'File' : [], 'Eval' : [] })
+        for _, row in self.res_list1.iterrows():
+            df.loc[-1] = [row['File'], 1]
+            df.index = df.index + 1
+        for _, row in self.res_list2.iterrows():
+            df.loc[-1] = [row['File'], 0]
+            df.index = df.index + 1
+        df.to_csv('output.csv', sep=';')
+
+    def do_edu(self, redu=False): # обучение выбранной модели
+        # выделение данных характеристик для обучения и для проверки
         train_X = pd.concat([self.edu_list1.drop(columns = ['File']), self.edu_list2.drop(columns = ['File'])])
         test_X = self.eval_list.drop(columns = ['File'])
         for col in self.keys.columns:
@@ -533,57 +476,60 @@ class EvalApp(QMainWindow):
                 train_X = train_X.drop(columns=[col])
                 test_X = test_X.drop(columns=[col])
         
-        if self.normalize_box.isChecked():
+        if self.normalize_box.isChecked(): # выполнение нормализации, если выбран флажок
             gen = pd.concat([train_X, test_X], ignore_index=True)
             train_X = (train_X - gen.mean())/gen.std()
             test_X = (test_X - gen.mean())/gen.std()
-
-        train_Y = pd.DataFrame({
+        # выделение данных оценки для обучения и для проверки
+        train_Y = pd.DataFrame({ 
             'fatique' : [1] * len(self.edu_list1) + [0] * len(self.edu_list2)
         })
         test_Y = pd.DataFrame({
             'fatique' : [1] * (len(self.data_list1) - len(self.edu_list1)) + [0] * (len(self.data_list2) - len(self.edu_list2))
         })
 
-        if redu:
+        if redu: # вариант с переобучением модели (с сохранением параметров) на новых данных
             self.model.redu(train_X, train_Y, test_X, test_Y)   
-        else:
+        else: # обучение модели с нуля
+            if self.model_name == 'Basic':
+                self.model = BasicEval()
             if self.model_name == 'RFC':
                 self.model = RandomForestEval()
             elif self.model_name == 'DTC':
                 self.model = DecisionTreeEval()
             elif self.model_name == 'MLP':
                 self.model = MLPEval()
-            if self.crossvalid_box.isChecked():
+            if self.crossvalid_box.isChecked(): # вариация обучения с использование кроссвалидации
+                # формирование общей выборки
                 data_X = pd.concat([self.data_list1.drop(columns = ['File']), self.data_list2.drop(columns = ['File'])], ignore_index=True)
-                if self.normalize_box.isChecked():
-                    data_X = (data_X - data_X.mean())/data_X.std()
+                if self.normalize_box.isChecked(): 
+                    data_X = (data_X - data_X.mean())/data_X.std() # нормализация
                 data_X.dropna()
                 data_Y = pd.DataFrame({
                         'fatique' : [1] * len(self.data_list1) + [0] * len(self.data_list2)
                 })
                 data = pd.concat([data_X, data_Y], axis=1)
-                data = data.sample(frac=1)
-                data.to_csv('xx.csv', sep=';')
+                data = data.sample(frac=1) # перемешивание выборки
                 data_Y = data['fatique']
                 data_X = data.drop(columns=['fatique'])
-                self.model.cross_edu(data_X, data_Y)
+                self.model.cross_edu(data_X, data_Y) # выполнение обучения с кроссвалидацией (не работает для алгоритмической модели)
+                # вывод результатов обучения
                 self.f1_line.setText('F1: ' + format(self.model.f1,'.3f') + 
                                     ' Acc: ' + format(self.model.acc, '.3f'))
                 self.crossvalid_label.setText('F1: ' + format(self.model.cross_f1,'.3f') + 
                                     ' Acc: ' + format(self.model.cross_acc, '.3f'))
             else:
-                print(len(train_X), len(train_Y), len(test_X), len(test_Y))
+                # обучение без кроссвалидации
                 self.model.edu(train_X, train_Y, test_X, test_Y)
-        #self.model = RandomForestEval.edu(train_X, train_Y, test_X, test_Y)
 
-    def set_status(self, status):
+    def set_status(self, status): # установка статуса процесса (облегчает ориентацию в визуальном интерфейсе, отображает текущую стадию обработки данных)
         self.status = status
         self.status_text.setGeometry(0, self.height()-30, 3000, 30)
         self.reset_status_btn.setGeometry(self.width()-100, self.height()-30, 100, 30)
         self.status_img.setGeometry(0, self.height()-30, 3000, 30)
 
         '''
+        # опционально можно блокировать группы визуальных компонентов в зависимости от текущей стадии процесса
         for widget in self.data_group:
             widget.setEnabled(status == 0)
         for widget in self.edu_group:
@@ -593,7 +539,7 @@ class EvalApp(QMainWindow):
         for widget in self.res_group:
             widget.setEnabled(status == 3)
         '''
-
+        # текстовое и цветовое сопровождение
         if status == 0:
             self.status_text.setText('  Загрузите данные для обработки')
             self.status_img.setPixmap(QPixmap('UI/Red.png'))
@@ -607,10 +553,9 @@ class EvalApp(QMainWindow):
             self.status_text.setText('  Оценка выполнена')
             self.status_img.setPixmap(QPixmap('UI/Green.png'))
 
-
+# инициализация приложения через мейн процесс
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     sleep(10)
     ex = EvalApp()
     sys.exit(app.exec_())
-
