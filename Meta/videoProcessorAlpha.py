@@ -1,6 +1,6 @@
 import os
 import numpy as np
-import cv2 # для видеообработки требуется также библиоетка cv2, не включённая в основной список зависимостей
+import cv2 
 from math import pi
 import datetime
 import os.path
