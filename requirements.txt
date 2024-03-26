@@ -4,3 +4,4 @@ scikit-learn
 numpy
 PyQt6
 opencv-python
+joblib
