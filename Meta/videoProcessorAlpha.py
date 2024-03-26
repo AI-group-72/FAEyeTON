@@ -345,7 +345,7 @@ if __name__ == '__main__':
     inputVideoPath = "video_test.avi"
     outputPath = inputVideoPath + '+alpha.csv'
 
-    v = VideoProcessor(doLogging=True)
+    v = SceneProcessor(doLogging=True)
     v.EyetrackerHorizontalFOV = 82  # угол обзора камеры сцены айтрекера. Обычно есть в паспорте модели.
     v.LoadVideo(inputVideoPath)
     v.DoProcessing(5)  # рекомендуемое значение 1
