@@ -388,12 +388,11 @@ class ParsedData:
 
     def to_csv(self, file_name, file_to): # вывод данных в файл формата .csv
         print('csv file... ' + file_to)
-        row = self.get_row(file_name)
-        print('appending a row...')
-        with open(file_to, 'a', newline='') as csvfile: # используется метод дозаписи в файл
-            _writer = csv.writer(csvfile, delimiter=';')
-            _writer.writerow(row)
-        print('writen')
+        row = self.get_df_row(file_name)
+        if os.path.exists(file_to):
+            row.to_csv(file_to, mode='a', index=False, header=False, sep=';')
+        else:
+            row.to_csv(file_to, index=False, header=True, sep=';')
 
     def get_df_row(self, file='none'): # запрос характеристик в виде DataFrame
         all_fix = self.secondary.short_fix_count + self.secondary.med_fix_count + self.secondary.long_fix_count
