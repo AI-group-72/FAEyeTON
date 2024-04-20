@@ -4,7 +4,8 @@
 
 
 from .InputSection import InputSection
-from ..DeviceManager import DeviceHandler, Synchronizer
+from ..DeviceManager.DeviceHandler import DeviceHandler
+from ..DeviceManager.Synchronizer import Synchronizer
 
 
 def read_video_file(path):
