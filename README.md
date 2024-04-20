@@ -91,7 +91,7 @@ $ python -m pip install -r requirements.txt
 
 Главное меню программы выглядит следующим образом:  
 
- ![image](https://github.com/AI-group-72/FAEyeTON/assets/45206030/4cf469e3-b425-4d9d-a8b8-a12f12bfd46d)
+![image](https://github.com/AI-group-72/FAEyeTON/assets/45206030/824d6b71-91ac-4f24-81e7-31ea36ce4534)
 
 Рисунок 7. Главное меню программы 
 
