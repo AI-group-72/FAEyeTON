@@ -183,7 +183,7 @@ $ python -m pip install -r requirements.txt
 После проведения всех расчетов окно программы выглядит следующим образом (см. рисунок 17). 
  
 
- ![image](https://github.com/AI-group-72/FAEyeTON/assets/45206030/4b91b458-d379-49e9-8772-711273681d96)
+ ![image](https://github.com/AI-group-72/FAEyeTON/assets/45206030/1d4dc052-1ea7-47ad-a8d7-9d972b210fdb)
  
 Рисунок 17. Главное меню программы после выполнения всех расчетов 
 
