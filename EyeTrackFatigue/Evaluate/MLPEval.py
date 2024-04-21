@@ -104,7 +104,7 @@ class MLPEval(Evaluator):
         sol = ['lbfgs', 'sgd', 'adam']
         ac = ['identity', 'logistic', 'tanh', 'relu']
         err = 0
-        for i in range(1): # перебор случайных состояний / iterating through random states
+        for i in range(5): # перебор случайных состояний / iterating through random states
             print(i)
             for j in range(1,20): # Перебор параметров / Iterating through the parameters
                 for s in sol:
@@ -121,8 +121,8 @@ class MLPEval(Evaluator):
                             model.fit(train_X, train_Y)
                             y_pred = model.predict(test_X)
                             _f = f1_score(test_Y, y_pred)
-                            if _f < 0.60 or _f < (cur_f-0.15): # Досрочное отбрасываение - опционально, для оптимизации
-                                break
+                            #if _f < 0.60 or _f < (cur_f-0.15): # Досрочное отбрасываение - опционально, для оптимизации
+                            #    break
                             if _f > cur_f:
                                 cr = cross
                             f += _f
