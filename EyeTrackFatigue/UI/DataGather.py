@@ -87,9 +87,10 @@ class Example(QMainWindow):
         load_btn.clicked.connect(self.csvLoadButton)
         file_label = QLabel('Output file', self)
         file_label.move(380, 110)
-        self.file_line.setText('masterfile.xlsx')
+        self.file_line.setText('masterfile.csv')
         self.file_line.setGeometry(380, 140, 100, 20)
 
+        
         ppi_label = QLabel('Определение PPI', self)
         ppi_label.adjustSize()
         ppi_label.move(220, 140)
@@ -199,7 +200,7 @@ class Example(QMainWindow):
                 current += 1
                 print( (float(current) / float(total) * 100.0).__str__() + " % of progress")
 
-# инициализация приложения через мейн
+# инициализация приложения через мейн процесс
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     sleep(1)
