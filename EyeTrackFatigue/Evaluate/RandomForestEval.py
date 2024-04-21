@@ -1,4 +1,4 @@
-import datetime
+import datetime 
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
@@ -88,7 +88,9 @@ class RandomForestEval(Evaluator):
         c = ['gini', 'entropy', 'log_loss']
         n = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
         err = 0
-        for i in range(1):  # перебор случайных состояний / iterating through random states
+        cr = 'none'
+        n_e = 'none'
+        for i in range(5):  # перебор случайных состояний / iterating through random states
             print(i)
             for N in n:  # Перебор параметров / Iterating through the parameters
                 for C in c:  # Перебор параметров / Iterating through the parameters
@@ -104,8 +106,8 @@ class RandomForestEval(Evaluator):
                         model.fit(train_X, train_Y)
                         y_pred = model.predict(test_X)
                         _f = f1_score(test_Y, y_pred)
-                        if _f < 0.60 or _f < (cur_f-0.15): # Досрочное отбрасываение - опционально, для оптимизации
-                            break
+                        #if _f < 0.60 or _f < (cur_f-0.15): # Досрочное отбрасываение - опционально, для оптимизации
+                        #    break
                         f += _f
                         acc += accuracy_score(test_Y, y_pred)
                     f = f / 5
