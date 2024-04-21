@@ -1,4 +1,5 @@
 import sys
+import math
 from time import sleep
 import pandas as pd
 import pickle
@@ -31,7 +32,7 @@ class EvalApp(QMainWindow):
         self.rb_group.addButton(self.rb_dtc)
         self.rb_group.addButton(self.rb_mlp)
         self.rb_mlp.setChecked(True)
-        self.model_name = 'Basic'
+        self.model_name = 'MLP'
         self.rb_group.buttonClicked.connect(self.rb_click)
 
         self.data_list1 = []
@@ -124,9 +125,9 @@ class EvalApp(QMainWindow):
         self.data_group.append(self.arg_line)
 
         file_size_label = QLabel('Максимальный размер файла:', self)
-        file_size_label.setGeometry(10, 520, 150, 30)
+        file_size_label.setGeometry(10, 520, 170, 30)
         self.data_group.append(file_size_label)
-        self.file_size_line.setGeometry(160, 520, 50, 30)
+        self.file_size_line.setGeometry(182, 520, 30, 30)
         self.data_group.append(self.file_size_line)
 
     ##################################################################################################################
@@ -480,6 +481,15 @@ class EvalApp(QMainWindow):
             gen = pd.concat([train_X, test_X], ignore_index=True)
             train_X = (train_X - gen.mean())/gen.std()
             test_X = (test_X - gen.mean())/gen.std()
+            for _, row in train_X.iterrows():
+                for i in range(len(row)):
+                    if math.isnan(row[i]):
+                        row[i] = 0
+            for _, row in test_X.iterrows():
+                for i in range(len(row)):
+                    if math.isnan(row[i]):
+                        row[i] = 0
+            
         # выделение данных оценки для обучения и для проверки
         train_Y = pd.DataFrame({ 
             'fatique' : [1] * len(self.edu_list1) + [0] * len(self.edu_list2)
@@ -502,14 +512,23 @@ class EvalApp(QMainWindow):
             if self.crossvalid_box.isChecked(): # вариация обучения с использование кроссвалидации
                 # формирование общей выборки
                 data_X = pd.concat([self.data_list1.drop(columns = ['File']), self.data_list2.drop(columns = ['File'])], ignore_index=True)
-                if self.normalize_box.isChecked(): 
-                    data_X = (data_X - data_X.mean())/data_X.std() # нормализация
-                data_X.dropna()
+                for col in self.keys.columns:
+                    if self.keys[col][0] == 0 and data_X.columns.__contains__(col):
+                        data_X = data_X.drop(columns=[col])
+                if self.normalize_box.isChecked():
+                    data_X = (data_X - data_X.mean())/(data_X.std()) # нормализация
+                    for _, row in data_X.iterrows():
+                        for i in range(len(row)):
+                            if math.isnan(row[i]):
+                                row[i] = 0
+                    
                 data_Y = pd.DataFrame({
                         'fatique' : [1] * len(self.data_list1) + [0] * len(self.data_list2)
                 })
                 data = pd.concat([data_X, data_Y], axis=1)
                 data = data.sample(frac=1) # перемешивание выборки
+                print(data)
+                data.dropna(inplace=True)                
                 data_Y = data['fatique']
                 data_X = data.drop(columns=['fatique'])
                 self.model.cross_edu(data_X, data_Y) # выполнение обучения с кроссвалидацией (не работает для алгоритмической модели)
@@ -542,13 +561,13 @@ class EvalApp(QMainWindow):
         # текстовое и цветовое сопровождение
         if status == 0:
             self.status_text.setText('  Загрузите данные для обработки')
-            self.status_img.setPixmap(QPixmap('UI/Red.png'))
+            self.status_img.setPixmap(QPixmap('EyeTrackFatigue/UI/Red.png'))
         if status == 1:
             self.status_text.setText('  Обучите модель или загрузите уже обученную')
-            self.status_img.setPixmap(QPixmap('UI/Orange.png'))
+            self.status_img.setPixmap(QPixmap('EyeTrackFatigue/UI/Orange.png'))
         if status == 2:
             self.status_text.setText('  Программа готова к запуску оценки')
-            self.status_img.setPixmap(QPixmap('UI/Yellow.png'))
+            self.status_img.setPixmap(QPixmap('EyeTrackFatigue/UI/Yellow.png'))
         if status == 3:
             self.status_text.setText('  Оценка выполнена')
             self.status_img.setPixmap(QPixmap('UI/Green.png'))
