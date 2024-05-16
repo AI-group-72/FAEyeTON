@@ -127,8 +127,8 @@ class Example(QMainWindow):
 
     def pupilButton(self): # загрузка файлов, полученных от PupilLabs (сервис поставщика окулографа)
         print('pupil button click')
-        csv_path, _ = QFileDialog.getOpenFileNames()
-        pupil_path, _ = QFileDialog.getOpenFileNames()
+        csv_path, _ = QFileDialog.getOpenFileNames(caption='Файлы окулографа')
+        pupil_path, _ = QFileDialog.getOpenFileNames(caption='Файлы pupil_labs')
 
         if len(csv_path) == 0:
             return
@@ -148,7 +148,7 @@ class Example(QMainWindow):
             metrics = ParsedData()
             metrics.parse_pupil(section, pupil_path[i])
             metrics.calc_metrics()
-            metrics.to_xls(csv_path[i].split('/')[-1], self.file_line.text())
+            metrics.to_csv(csv_path[i].split('/')[-1], self.file_line.text())
 
     def csvLoadButton(self): # загрузка файлов на обработку
         print('load button click')
