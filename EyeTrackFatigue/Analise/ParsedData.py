@@ -1,6 +1,6 @@
 import os
 import math
-from pandas import read_excel, concat, DataFrame
+from pandas import read_excel, read_csv, concat, DataFrame
 from openpyxl import load_workbook
 import csv
 import numpy as np
@@ -74,16 +74,17 @@ class ParsedData:
 
     def parse_pupil(self, input_section, file): # разметка на основе внешних данных
         print('parse by pupil...')
-        self.raw_data = input_section
         # предварительная инициализация, выделение базовых характеристик
+        self.raw_data = input_section
         self.center_radius = 0
         self.dots = len(input_section.positionData)
+        self.sep_geo(input_section.FOV)
         self.time_frame = input_section.time_frame()
         self.minSpeed = min(input_section.velocityData)
         self.maxSpeed = max(input_section.velocityData)
         self.avrSpeed = sum(input_section.distanceData) / self.time_frame
-        self.method = 4
-        self.args = file
+        self.method = 'Pupillabs'
+        self.args = ''
         print('marking fixations...')
         self.flag = []
         self.get_fixation_by_pupil(file)
@@ -419,7 +420,7 @@ class ParsedData:
                             'Saccades with amplitude < 6 degrees, per minute': [
                                 self.secondary.short_sacc / self.time_frame * 60],
                             'Max Curve': [self.secondary.max_curve],
-                            'Average Curve': [self.secondary.avr_curve / (len(self.fixations) + len(self.saccades))],
+                            'Average Curve': [self.secondary.avr_curve / (max(1,len(self.saccades)))],
                             'Min Curve': [self.secondary.min_curve],
                             'Time Frame': [self.time_frame],
                             'Saccades time': [self.secondary.sacc_time],
@@ -534,7 +535,7 @@ class ParsedData:
 
         update_cell(file_to, new_row, key_index(df, 'Max Curve'), self.secondary.max_curve)
         update_cell(file_to, new_row, key_index(df, 'Average Curve'),
-                    self.secondary.avr_curve / (len(self.fixations) + len(self.saccades)))
+                    self.secondary.avr_curve / (max(1,len(self.saccades))))
         update_cell(file_to, new_row, key_index(df, 'Min Curve'), self.secondary.min_curve)
 
         update_cell(file_to, new_row, key_index(df, 'Time Frame'), self.time_frame)
@@ -661,14 +662,22 @@ class ParsedData:
     @staticmethod
     def ppi_to_xls(file_from, lines, file_to): # метод для добавления доп. информации о преимпульсном ингибировании
         # использование этих данных не показало ожидаемого результата, однако оставлена возможность для доработки / добавления другой дополнительной информации
-        print('excel file preparing ' + file_to)
-        print('forming headline...')
-        df = read_excel(file_to, engine='openpyxl')
+        print('csv file preparing ' + file_to)
+        
+        df = read_csv(file_to, sep=';')
+        print(df)
+        print(df['File'])
+        if not df.columns.__contains__('Average PPI'):
+            print('forming headline...')
+            df.insert(len(df.columns), 'Average PPI', ['none'] * len(df['File']))
+            df.insert(len(df.columns), 'Min PPI', ['none'] * len(df['File']))
+            df.insert(len(df.columns), 'Max PPI', ['none'] * len(df['File']))
+            
         print('finding a row...')
         i = -1
-        temp = 1
+        temp = 0
         file_from = file_from.split('/')[-1]
-        for file_name in df.get('File'):
+        for file_name in df['File']:
             if file_name.split('.')[0] == file_from.split('.')[0]:
                 i = temp
             temp += 1
@@ -678,16 +687,17 @@ class ParsedData:
 
         print('forming ppi')
         ppi = []
-        first_fl = True
+        first_fl = 0
         for line in lines:
-            if first_fl:
-                first_fl = False
+            if first_fl < 2:
+                first_fl += 1
                 continue
             ppi.append(float(line.split(';')[1].split('\n')[0]))
 
-        update_cell(file_to, i, key_index(df, 'Average PPI'), sum(ppi)/len(ppi))
-        update_cell(file_to, i, key_index(df, 'Min PPI'), min(ppi))
-        update_cell(file_to, i, key_index(df, 'Max PPI'), max(ppi))
+        df['Average PPI'][i] = sum(ppi)/len(ppi)
+        df['Min PPI'][i] = min(ppi)
+        df['Max PPI'][i] = max(ppi)
+        df.to_csv(file_to, sep=';', index=False)
         print('PPI writen')
 
     def __str__(self): # вывод в стоковом формате, выводитьcя частичная информация о размеченном отрезке
