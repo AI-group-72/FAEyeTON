@@ -19,6 +19,7 @@ class DecisionTreeEval(Evaluator):
     def evaluate(self, data):
         if self.model == None:
             print('Not educated yet')
+            return None
         else:
             return self.model.predict(data)
 
@@ -48,6 +49,10 @@ class DecisionTreeEval(Evaluator):
         
         now = datetime.datetime.now() - now
         print(now) # вывод времени
+        if err == 0: # случай неудачного обучения
+            print('Unsuccessfull education, no model was educated with F-score > 0.')
+            print('Неудачное обучение, ни одна модель не обучилась с F-оценкой > 0.')
+            return
         print(rand)
         print (cr)
         # переобучение по лучшим выявленным параметрам
@@ -116,13 +121,16 @@ class DecisionTreeEval(Evaluator):
                     err = f
                     crit = C
                     cross_acc = acc
-        print(rand)
-        print(crit)
-        
         now = datetime.datetime.now()
         print(now)
         # Время окончания обучения / Training end timestamp 
         print('Total time:', now - now1)
+        if err == 0: # случай неудачного обучения
+            print('Unsuccessfull education, no model was educated with F-score > 0.')
+            print('Неудачное обучение, ни одна модель не обучилась с F-оценкой > 0.')
+            return
+        print(rand)
+        print(crit)
         test_X = teX[cross]
         test_Y = teY[cross]
         train_X = trX[cross]
