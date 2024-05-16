@@ -25,6 +25,7 @@ class MLPEval(Evaluator):
     def evaluate(self, data):
         if self.model == None:
             print('Not educated yet')
+            return None
         else:
             return self.model.predict(data)
 
@@ -57,14 +58,17 @@ class MLPEval(Evaluator):
                             h = j
                             Ac = a
                             S = s
+        now = datetime.datetime.now()
+        print(now)
+        print('Total time:', now - now1) # вывод времени
+        if err == 0: # случай неудачного обучения
+            print('Unsuccessfull education, no model was educated with F-score > 0.')
+            print('Неудачное обучение, ни одна модель не обучилась с F-оценкой > 0.')
+            return
         print(h)
         print(rand)
         print(Ac)
         print(S)
-        
-        now = datetime.datetime.now()
-        print(now)
-        print('Total time:', now - now1) # вывод времени
         # переобучение по лучшим выявленным параметрам
         self.model = MLPClassifier(solver=S, activation = Ac, alpha=1e-5, hidden_layer_sizes=(h), random_state=rand)
         self.model.fit(train_X, train_Y)
@@ -138,15 +142,17 @@ class MLPEval(Evaluator):
                             h = j
                             Ac = a
                             S = s
+        now = datetime.datetime.now()
+        print(now)
+        print('Total time:', now - now1) # вывод времени
+        if err == 0: # случай неудачного обучения
+            print('Unsuccessfull education, no model was educated with F-score > 0.')
+            print('Неудачное обучение, ни одна модель не обучилась с F-оценкой > 0.')
+            return
         print(h)
         print(rand)
         print(Ac)
         print(S)
-        
-        now = datetime.datetime.now()
-        print(now)
-        # Время окончания обучения / Training end timestamp 
-        print('Total time:', now - now1)
         test_X = teX[cr]
         test_Y = teY[cr]
         train_X = trX[cr]
