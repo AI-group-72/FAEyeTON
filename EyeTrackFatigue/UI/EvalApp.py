@@ -65,6 +65,8 @@ class EvalApp(QMainWindow):
         self.ideal_min = ParsedData.get_df_null_row().drop(columns=['File'])
         self.ideal_max = ParsedData.get_df_null_row().drop(columns=['File'])
         self.f1_line = QLineEdit('0.0', self)
+        self.file_line = QLineEdit('output.csv', self)
+
         # группы визуальных компонентов
         self.data_group = []
         self.edu_group = []
@@ -242,6 +244,12 @@ class EvalApp(QMainWindow):
         self.crossvalid_label = QLineEdit('', self)
         self.crossvalid_label.setGeometry(900, 240, 100, 30)
         self.eval_group.append(self.crossvalid_label)
+        self.file_line.setGeometry(900, 280, 100, 30)
+        self.eval_group.append(self.file_line)
+        output_button = QPushButton('Вывести в файл', self)
+        output_button.clicked.connect(self.output_result)
+        output_button.setGeometry(900, 320, 100, 30)
+        self.eval_group.append(output_button)
 
         self.set_status(0)
         self.check_box_std()
@@ -422,15 +430,17 @@ class EvalApp(QMainWindow):
             if self.keys[col][0] == 0 and file_data.columns.__contains__(col):
                 file_data = file_data.drop(columns=[col])
         tired = self.model.evaluate(file_data)
+        if tired is None:
+            self.f1_line.setText('Не обучена!')
+            return
         for i in range(len(tired)):
-            if not tired[i]:
+            if tired[i]:
                 self.res_list1.loc[len(self.res_list1)] = self.eval_list['File'][i]
             else:
                 self.res_list2.loc[len(self.res_list2)] = self.eval_list['File'][i]
         
         self.corr = 0
         self.err = 0
-        print(self.res_list1)
         # подсчёт верных и неверных оценок (по соответствию с изначально загруженными данными)
         for _, row in self.res_list1.iterrows():
             if self.data_list_text1.toPlainText().__contains__(row['File']) : # gjghfdbnm
@@ -455,7 +465,7 @@ class EvalApp(QMainWindow):
         self.res_list_text2.setPlainText('')
         for _, row in self.res_list2.iterrows():
             self.res_list_text2.setPlainText(self.res_list_text2.toPlainText() + str(row['File']) + '\n')
-        self.output_result() # вывод результатов оценки в файл (можно закомментировать, если не требуется)
+        #self.output_result() # вывод результатов оценки в файл (можно закомментировать, если не требуется)
         self.set_status(3) # переключение статуса процесса
 
     def output_result(self): # вывод результатов оценки в файл
@@ -466,7 +476,7 @@ class EvalApp(QMainWindow):
         for _, row in self.res_list2.iterrows():
             df.loc[-1] = [row['File'], 0]
             df.index = df.index + 1
-        df.to_csv('output.csv', sep=';')
+        df.to_csv(self.file_line.text(), sep=';')
 
     def do_edu(self, redu=False): # обучение выбранной модели
         # выделение данных характеристик для обучения и для проверки
@@ -540,6 +550,8 @@ class EvalApp(QMainWindow):
             else:
                 # обучение без кроссвалидации
                 self.model.edu(train_X, train_Y, test_X, test_Y)
+        if self.f1_line.text() != 'Не обучена!':
+            self.set_status(2)
 
     def set_status(self, status): # установка статуса процесса (облегчает ориентацию в визуальном интерфейсе, отображает текущую стадию обработки данных)
         self.status = status
