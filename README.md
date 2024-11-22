@@ -216,7 +216,7 @@ $ python -m pip install -r requirements.txt
 Мамонов А.А.
 Коваленко С.Д.
 
-Руководство по разработке
+Руководство по разработке: https://github.com/AI-group-72/FAEyeTON/blob/main/README_DEV.md
 
 
 # Лицензия | LICENSE
